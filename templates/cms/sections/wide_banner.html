@@ -1,0 +1,19 @@
+{% if section_context.banner %}
+{% with banner=section_context.banner %}
+<section class="hm-wide{% if not banner.image %} hm-wide--plain{% endif %}">
+  {% if banner.image %}
+  <img class="hm-wide__img" src="{{ banner.image }}" alt="" loading="lazy" decoding="async">
+  {% endif %}
+  <div class="hm-wide__panel">
+    <div class="hm-wide__body">
+      {% if banner.eyebrow %}<p class="hm-wide__eyebrow">{{ banner.eyebrow }}</p>{% endif %}
+      {% if banner.title %}<h2 class="hm-wide__title">{{ banner.title }}</h2>{% endif %}
+      {% if banner.subtitle %}<p class="hm-wide__subtitle">{{ banner.subtitle }}</p>{% endif %}
+      {% if banner.cta_label and banner.cta_url %}
+      <a href="{{ banner.cta_url }}" class="hm-btn hm-btn--solid">{{ banner.cta_label }} <span aria-hidden="true">&rarr;</span></a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endwith %}
+{% endif %}

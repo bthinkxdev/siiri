@@ -1,0 +1,19 @@
+{% load i18n %}
+{# Renders only contact details configured in SiteSettings; nothing when none are set. #}
+{% if site_settings.whatsapp_number or site_settings.vendor_email or site_settings.store_address %}
+<div class="jm-locations{% if compact %} jm-locations--compact{% endif %}">
+  {% if site_settings.store_address %}
+  <p class="jm-locations__body mb-1">{{ site_settings.store_address|linebreaksbr }}</p>
+  {% endif %}
+  {% if site_settings.whatsapp_number %}
+  <p class="jm-locations__body mb-1">
+    <a href="tel:{{ site_settings.whatsapp_number }}">{{ site_settings.whatsapp_number }}</a>
+  </p>
+  {% endif %}
+  {% if site_settings.vendor_email %}
+  <p class="jm-locations__body mb-0">
+    <a href="mailto:{{ site_settings.vendor_email }}">{{ site_settings.vendor_email }}</a>
+  </p>
+  {% endif %}
+</div>
+{% endif %}

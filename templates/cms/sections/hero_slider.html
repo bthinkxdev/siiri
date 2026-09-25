@@ -1,0 +1,60 @@
+{% load i18n static %}
+<section class="hm-hero" aria-label="{% trans 'Promotions' %}">
+  {% if section_context.slides %}
+  <div id="heroCarousel"
+       class="carousel slide carousel-fade hm-hero__carousel"
+       data-bs-ride="carousel"
+       data-bs-interval="6500"
+       data-bs-pause="hover">
+    <div class="carousel-inner">
+      {% for slide in section_context.slides %}
+      <div class="carousel-item {% if forloop.first %}active{% endif %}">
+        {% if slide.type == 'video' %}
+        <video class="hm-hero__media"
+               muted loop playsinline disablepictureinpicture
+               {% if forloop.first %}autoplay preload="auto"{% else %}preload="metadata"{% endif %}
+               {% if slide.poster %}poster="{{ slide.poster }}"{% endif %}
+               data-hero-video>
+          <source src="{{ slide.src }}" type="{{ slide.mime }}">
+        </video>
+        {% else %}
+        {% if forloop.first %}<link rel="preload" as="image" href="{{ slide.src }}" fetchpriority="high">{% endif %}
+        <img src="{{ slide.src }}"
+             class="hm-hero__media"
+             alt="{{ slide.title }}"
+             width="2400" height="940"
+             {% if forloop.first %}fetchpriority="high" loading="eager"{% else %}loading="lazy"{% endif %}>
+        {% endif %}
+
+        {% if slide.eyebrow or slide.title or slide.subtitle or slide.cta_label and slide.cta_url %}
+        <div class="hm-hero__caption">
+          <div class="hm-wrap hm-hero__caption-inner">
+            {% if slide.eyebrow %}<p class="hm-hero__eyebrow">{{ slide.eyebrow }}</p>{% endif %}
+            {% if slide.title %}<h2 class="hm-hero__title">{{ slide.title }}</h2>{% endif %}
+            {% if slide.subtitle %}<p class="hm-hero__subtitle">{{ slide.subtitle }}</p>{% endif %}
+            {% if slide.cta_label and slide.cta_url %}
+            <a href="{{ slide.cta_url }}" class="hm-btn hm-btn--solid">{{ slide.cta_label }} <span aria-hidden="true">&rarr;</span></a>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% if section_context.slides|length > 1 %}
+    <div class="hm-wrap hm-hero__dots-wrap">
+      <div class="carousel-indicators hm-hero__dots">
+        {% for slide in section_context.slides %}
+        <button type="button" data-bs-target="#heroCarousel" data-bs-slide-to="{{ forloop.counter0 }}"
+                {% if forloop.first %}class="active" aria-current="true"{% endif %}
+                aria-label="{% blocktrans with number=forloop.counter %}Slide {{ number }}{% endblocktrans %}"></button>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% if section_context.has_video %}<script src="{% static 'js/hero-video.js' %}" defer></script>{% endif %}
+  {% else %}
+  <div class="hm-hero__fallback" aria-hidden="true"></div>
+  {% endif %}
+</section>

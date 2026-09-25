@@ -1,0 +1,33 @@
+{% load i18n %}
+{% if section_context.testimonials %}
+{% trans "What Our Customers Say" as default_title %}
+<section class="hm-testi" aria-label="{{ section_context.title|default:default_title }}">
+  <div class="hm-wrap">
+    {% include "cms/sections/_ornament_head.html" with title=section_context.title|default:default_title %}
+    <ul class="hm-testi__row" role="list">
+      {% for item in section_context.testimonials %}
+      <li class="hm-testi__item">
+        <figure class="hm-testi__card">
+          <svg class="hm-testi__mark" viewBox="0 0 32 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M0 24V14.4C0 6.2 4.4 1.1 12 0l1.3 3.2C9.4 4.4 7.6 6.8 7.4 10H13v14H0zm19 0V14.4C19 6.2 23.400 1.100 31 0l1.300 3.200c-3.900 1.200-5.700 3.600-5.900 6.800H32v14H19z"/></svg>
+          <blockquote class="hm-testi__quote">{{ item.quote }}</blockquote>
+          {% if item.rating %}
+          <p class="hm-testi__stars" role="img" aria-label="{% blocktrans with rating=item.rating %}Rated {{ rating }} out of 5{% endblocktrans %}">{% for i in "12345" %}{% if forloop.counter <= item.rating %}&#9733;{% else %}&#9734;{% endif %}{% endfor %}</p>
+          {% endif %}
+          <figcaption class="hm-testi__who">
+            {% if item.photo %}
+            <img class="hm-testi__avatar" src="{{ item.photo }}" alt="" width="56" height="56" loading="lazy" decoding="async">
+            {% else %}
+            <span class="hm-testi__avatar hm-testi__avatar--initial" aria-hidden="true">{{ item.name|slice:":1"|upper }}</span>
+            {% endif %}
+            <span class="hm-testi__id">
+              <span class="hm-testi__name">{{ item.name }}</span>
+              {% if item.location %}<span class="hm-testi__place">{{ item.location }}</span>{% endif %}
+            </span>
+          </figcaption>
+        </figure>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+{% endif %}

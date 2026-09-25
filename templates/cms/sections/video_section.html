@@ -1,0 +1,18 @@
+{% load i18n static %}
+{% with video=section_context.video %}
+{% if video %}
+<section class="hm-video" aria-label="{% if video.title %}{{ video.title }}{% elif section_context.title %}{{ section_context.title }}{% else %}{% trans 'Video' %}{% endif %}">
+  {% if video.title or section_context.title or video.subtitle %}
+  <div class="hm-wrap">
+    {% include "cms/sections/_ornament_head.html" with title=video.title|default:section_context.title subtitle=video.subtitle %}
+  </div>
+  {% endif %}
+  <div class="hm-video__frame">
+    <video class="hm-video__player" autoplay muted loop playsinline disablepictureinpicture preload="auto"{% if video.poster %} poster="{{ video.poster }}"{% endif %} data-autoplay-video aria-hidden="true" tabindex="-1">
+      <source src="{{ video.src }}" type="{{ video.mime }}">
+    </video>
+  </div>
+  <script src="{% static 'js/autoplay-video.js' %}" defer></script>
+</section>
+{% endif %}
+{% endwith %}

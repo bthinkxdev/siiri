@@ -1,0 +1,24 @@
+{% load i18n %}
+{% if section_context.banners %}
+<section class="hm-tiles" aria-label="{% trans 'Featured collections' %}">
+  <div class="hm-wrap">
+    <div class="hm-tiles__grid">
+      {% for banner in section_context.banners %}
+      <article class="hm-tile{% if not banner.image %} hm-tile--plain{% endif %}">
+        {% if banner.image %}
+        <img class="hm-tile__img" src="{{ banner.image }}" alt="" loading="lazy" decoding="async">
+        {% endif %}
+        <div class="hm-tile__body">
+          {% if banner.eyebrow %}<p class="hm-tile__eyebrow">{{ banner.eyebrow }}</p>{% endif %}
+          {% if banner.title %}<h2 class="hm-tile__title">{{ banner.title }}</h2>{% endif %}
+          {% if banner.subtitle %}<p class="hm-tile__subtitle">{{ banner.subtitle }}</p>{% endif %}
+          {% if banner.cta_label and banner.cta_url %}
+          <a href="{{ banner.cta_url }}" class="hm-btn hm-btn--outline">{{ banner.cta_label }} <span aria-hidden="true">&rarr;</span></a>
+          {% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}

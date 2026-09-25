@@ -1,0 +1,15 @@
+{% load i18n %}
+{% if section_context.items %}
+<section class="hm-service" aria-label="{% trans 'Our promises' %}">
+  <div class="hm-wrap">
+    <ul class="hm-service__row" role="list">
+      {% for item in section_context.items %}
+      <li class="hm-service__item">
+        <span class="hm-service__icon">{% include "includes/_icon.html" with name=item.icon %}</span>
+        <span class="hm-service__label">{{ item.label }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+{% endif %}

@@ -1,0 +1,35 @@
+{% load i18n static %}
+{% if section_context.photos %}
+{% trans "Our Memories" as default_title %}
+<section class="hm-mem" data-memories aria-label="{{ section_context.title|default:default_title }}">
+  <div class="hm-wrap">
+    {% include "cms/sections/_ornament_head.html" with title=section_context.title|default:default_title subtitle=section_context.subtitle %}
+  </div>
+  <div class="hm-mem__stage">
+    <button type="button" class="hm-mem__arrow hm-mem__arrow--prev" data-memories-prev aria-label="{% trans 'Previous photo' %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <ul class="hm-mem__track" role="list" tabindex="0" data-memories-track aria-label="{% trans 'Photo gallery' %}">
+      {% for photo in section_context.photos %}
+      <li class="hm-mem__item" data-dist="{% if forloop.counter0 == 0 %}0{% else %}3{% endif %}">
+        <figure class="hm-mem__card">
+          <img src="{{ photo.image }}" alt="{{ photo.caption }}" loading="lazy" decoding="async" draggable="false">
+          {% if photo.caption %}<figcaption class="hm-mem__caption">{{ photo.caption }}</figcaption>{% endif %}
+        </figure>
+      </li>
+      {% endfor %}
+    </ul>
+    <button type="button" class="hm-mem__arrow hm-mem__arrow--next" data-memories-next aria-label="{% trans 'Next photo' %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+  </div>
+  {% if section_context.photos|length > 1 %}
+  <div class="hm-mem__dashes" role="group" aria-label="{% trans 'Choose a photo' %}">
+    {% for photo in section_context.photos %}
+    <button type="button" class="hm-mem__dash" data-memories-dash aria-label="{% blocktrans with number=forloop.counter %}Photo {{ number }}{% endblocktrans %}"></button>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <script src="{% static 'js/memories.js' %}" defer></script>
+</section>
+{% endif %}

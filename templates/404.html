@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Page not found" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block content %}
+<div class="container page-container jm-narrow py-5 text-center">
+  <p class="jm-eyebrow">404</p>
+  <h1 class="section-title mb-4">{% trans "Page not found" %}</h1>
+  <a href="{% url 'catalog:plp' %}" class="btn btn-floward">{% trans "Continue Shopping" %}</a>
+</div>
+{% endblock %}
