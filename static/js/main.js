@@ -147,24 +147,7 @@
     }
   });
 
-  function updatePlpSidebarScroll() {
-    // Disabled to prevent scroll glitching: max-height is handled purely via CSS calc()
-    /*
-    var sidebar = document.querySelector('.plp-filters-desktop');
-    if (!sidebar) return;
-    var rect = sidebar.getBoundingClientRect();
-    var availableHeight = window.innerHeight - rect.top - 24;
-    sidebar.style.maxHeight = Math.max(300, availableHeight) + 'px';
-    */
-  }
-
-  // window.addEventListener('scroll', updatePlpSidebarScroll, { passive: true });
-  // window.addEventListener('resize', updatePlpSidebarScroll, { passive: true });
-  // document.addEventListener('DOMContentLoaded', updatePlpSidebarScroll);
-  // updatePlpSidebarScroll();
-
   function reinitPageScripts() {
-    // updatePlpSidebarScroll();
     document.querySelectorAll('.thumb-btn').forEach(function (btn) {
       if (btn.dataset.boundThumb) return;
       btn.dataset.boundThumb = '1';
@@ -831,7 +814,21 @@ document.addEventListener('DOMContentLoaded', () => {
           selectedVid = String(variantsData[0].id);
         }
 
+        //variantsData is pre-sorted by type (see catalog.selectors._variants_prefetch),
+        //so a type change while iterating marks the start of a new group —
+        //insert a heading so products with more than one variant_type (e.g.
+        //Size and Qty) show each as its own labeled, separately selectable
+        //group instead of one undifferentiated list.
+        var lastQvType = null;
         variantsData.forEach(function (v) {
+          if (v.type && v.type !== lastQvType) {
+            lastQvType = v.type;
+            var heading = document.createElement('span');
+            heading.className = 'jm-qv__variant-type-label d-block w-100 small fw-bold text-uppercase text-muted mt-2 mb-1';
+            heading.textContent = v.type;
+            variantsGroup.appendChild(heading);
+          }
+
           var vidStr = String(v.id);
           var isOutVariant = v.stock <= 0;
           var inputId = 'qv_variant_' + vidStr;
@@ -1015,15 +1012,48 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sizeBtn && !sizeBtn.disabled) {
       var group = sizeBtn.closest('[data-spotlight-sizes]');
       var section = sizeBtn.closest('.jm-spotlight');
-      group.querySelectorAll('.jm-spotlight__size').forEach(function (btn) {
-        btn.classList.remove('is-active');
-      });
+      //only one variant can be the active selection across the whole
+      //section — a product may have more than one variant-type group (e.g.
+      //Size and Qty) rendered as separate lists, but there's still just one
+      //underlying ProductVariant row being added to cart, so picking an
+      //option in one group must clear any selection in every other group.
+      if (section) {
+        section.querySelectorAll('.jm-spotlight__size').forEach(function (btn) {
+          btn.classList.remove('is-active');
+        });
+      } else {
+        group.querySelectorAll('.jm-spotlight__size').forEach(function (btn) {
+          btn.classList.remove('is-active');
+        });
+      }
       sizeBtn.classList.add('is-active');
       if (section) {
         var variantId = sizeBtn.getAttribute('data-variant-id');
         section.querySelectorAll('[data-spotlight-variant-input]').forEach(function (input) {
           input.value = variantId;
         });
+
+        var variantsData = [];
+        try {
+          variantsData = JSON.parse(group.getAttribute('data-variants-json') || '[]');
+        } catch (e) {}
+        var variant = variantsData.filter(function (v) { return String(v.id) === String(variantId); })[0];
+        if (variant) {
+          var symbol = group.getAttribute('data-currency-symbol') || '';
+          var priceEl = section.querySelector('#jm-spotlight-price-value');
+          var mrpEl = section.querySelector('#jm-spotlight-price-mrp');
+          if (priceEl) {
+            priceEl.textContent = symbol + ' ' + parseFloat(variant.price).toFixed(2).replace(/\.00$/, '');
+          }
+          if (mrpEl) {
+            if (variant.mrp) {
+              mrpEl.textContent = symbol + ' ' + parseFloat(variant.mrp).toFixed(2).replace(/\.00$/, '');
+              mrpEl.style.display = '';
+            } else {
+              mrpEl.style.display = 'none';
+            }
+          }
+        }
       }
     }
   });
@@ -1229,7 +1259,18 @@ document.addEventListener('DOMContentLoaded', () => {
           selectedVid = String(variantsData[0].id);
         }
 
+        //see the matching comment in the Quick View modal builder above —
+        //variantsData is pre-sorted by type, so a type change marks a new group.
+        var lastAtcType = null;
         variantsData.forEach(function (v) {
+          if (v.type && v.type !== lastAtcType) {
+            lastAtcType = v.type;
+            var heading = document.createElement('span');
+            heading.className = 'jm-atc__variant-type-label d-block w-100 small fw-bold text-uppercase text-muted mt-2 mb-1';
+            heading.textContent = v.type;
+            variantsGroup.appendChild(heading);
+          }
+
           var vidStr = String(v.id);
           var isOutVariant = v.stock <= 0;
           var inputId = 'atc_variant_' + vidStr;
@@ -1298,7 +1339,6 @@ document.addEventListener('DOMContentLoaded', () => {
               discount.classList.add('d-none');
             }
             
-            // update border color of selected label
             variantsGroup.querySelectorAll('label').forEach(l => {
               l.classList.remove('border-primary');
               l.style.borderWidth = '1px';
@@ -1317,7 +1357,6 @@ document.addEventListener('DOMContentLoaded', () => {
         var initVid = checked ? checked.value : selectedVid;
         if (variantId) variantId.value = initVid;
         
-        // trigger change event to style the initially checked radio
         if (checked) {
           checked.dispatchEvent(new Event('change'));
         }

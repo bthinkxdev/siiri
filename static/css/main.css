@@ -1559,9 +1559,10 @@ body.mobile-search-open {
   width: 100%;
 }
 
+/* min-height/border-radius live in the body.jm-body tier (line ~8156),
+   which always wins here on specificity — this base rule only owns what
+   nothing else redeclares. */
 .jm-pdp-btn {
-  min-height: 48px;
-  border-radius: 14px !important;
   font-weight: 700;
   letter-spacing: 0.01em;
 }
@@ -2798,7 +2799,6 @@ body.mobile-search-open {
     --brand-card-w: var(--brand-card-w-mobile);
   }
 
-  /* .brand-card-logo { height: 96px; border-radius: 12px; } */
   .brand-card-name {
     font-size: 0.85rem;
   }
@@ -3915,24 +3915,18 @@ body.mobile-search-open .jm-wa-float {
   }
 }
 
-/* ----- Product cards ----- */
+/* ----- Product cards -----
+   border/border-radius/box-shadow/background/:hover live in the "quiet card"
+   tier below (image-focused, borderless design) and the body.jm-body tier
+   (background/--bs-card-bg) — this base tier only owns layout/box-model
+   properties nothing else redeclares. */
 .jm-product-card {
   position: relative;
-  border: 1px solid var(--jm-border-light) !important;
-  border-radius: var(--jm-radius-lg) !important;
-  background: var(--jm-white);
   overflow: hidden;
-  box-shadow: var(--jm-shadow-sm) !important;
   display: flex !important;
   flex-direction: column;
   height: 100%;
   transition: transform var(--jm-transition), box-shadow var(--jm-transition), border-color var(--jm-transition);
-}
-
-.jm-product-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(74, 9, 8, 0.16) !important;
-  box-shadow: var(--jm-shadow) !important;
 }
 
 .jm-product-card__media {
@@ -4612,8 +4606,15 @@ button.jm-product-card__atc--in-cart:hover {
   border-radius: 10px;
 }
 
-.jm-qv__actions .qty-stepper__btn {
+/* Prefixed with body.jm-body: the global `body.jm-body .qty-stepper__btn`
+   touch-target floor (line ~7732) sets min-width/min-height: 40px at higher
+   specificity than an un-prefixed rule here would have, so it would
+   silently win and stretch the buttons past this modal's compact 30px
+   design, breaking the stepper's layout inside the tight .jm-qv__actions row. */
+body.jm-body .jm-qv__actions .qty-stepper__btn {
   width: 30px;
+  min-width: 30px;
+  min-height: 30px;
 }
 
 .jm-qv__actions .qty-stepper__value {
@@ -6138,8 +6139,19 @@ body.jm-body .site-header.siri-hd.jm-header--hidden {
   min-width: 0;
 }
 
+/* The hanging logo card is centered via left:50% inside .siri-hd__inner,
+   independent of this flex row's layout (it's positioned absolutely, so
+   the nav/actions on either side don't naturally avoid it). Reserve a
+   buffer equal to the card's own half-width plus the header gutter on the
+   inner edge of each side so nav content never runs underneath the logo
+   at the desktop widths where the nav is widest relative to the card. */
+.siri-hd__start {
+  padding-right: calc(var(--siri-card-w) / 2 + var(--siri-gutter));
+}
+
 .siri-hd__end {
   justify-content: flex-end;
+  padding-left: calc(var(--siri-card-w) / 2 + var(--siri-gutter));
 }
 
 .siri-hd__toggle {
@@ -7749,9 +7761,6 @@ body.jm-body .qty-stepper__value {
 /* ---------- Product card ---------- */
 body.jm-body .jm-product-card {
   background: transparent;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
   --bs-card-bg: transparent;
 }
 
@@ -9273,11 +9282,18 @@ body.jm-body .hm-head__title {
   display: none;
 }
 
-.jm-spotlight__media .jm-pdp-gallery__image {
+/* Prefixed with body.jm-body to outrank the global
+   `body.jm-body .jm-pdp-gallery__image` tier (line ~8043), which also carries
+   an !important object-fit and would otherwise win on specificity alone
+   (2 classes vs. this rule's un-prefixed 2 classes, decided by the extra
+   `body` element). Without this prefix the garment photo was silently forced
+   to object-fit: cover by that global tier, cropping the top/bottom of the
+   product photo inside the shorter spotlight banner aspect ratio. */
+body.jm-body .jm-spotlight__media .jm-pdp-gallery__image {
   position: absolute;
   inset: 0;
   padding: 0;
-  object-fit: cover !important;
+  object-fit: contain !important;
   border-radius: 0 !important;
 }
 
@@ -9308,7 +9324,11 @@ body.jm-body .hm-head__title {
   overflow-y: auto;
 }
 
-.jm-spotlight__media .jm-pdp-gallery__thumb {
+/* Prefixed with body.jm-body: the global `body.jm-body .jm-pdp-gallery__thumb`
+   tier (line ~8049) carries the same !important on border-radius at higher
+   specificity, so it silently won and swapped in the larger PDP-page radius
+   token instead of the smaller one sized for these compact 48x60 thumbs. */
+body.jm-body .jm-spotlight__media .jm-pdp-gallery__thumb {
   width: 48px !important;
   height: 60px !important;
   border-radius: var(--jm-radius-sm) !important;
@@ -9542,7 +9562,11 @@ body.jm-body .hm-head__title {
   flex: 1 1 150px;
 }
 
-.jm-spotlight__form .jm-pdp-btn {
+/* Prefixed with body.jm-body: the global `body.jm-body .jm-pdp-btn` tier
+   (line ~8156) sets min-height: 52px at higher specificity than the plain
+   selector below, so it silently won and stretched these buttons past the
+   compact height this banner's layout was designed for. */
+body.jm-body .jm-spotlight__form .jm-pdp-btn {
   width: 100%;
   min-height: 44px;
   border-radius: var(--jm-radius) !important;

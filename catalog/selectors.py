@@ -71,10 +71,15 @@ def _primary_image_prefetch() -> Prefetch:
 
 
 def _variants_prefetch() -> Prefetch:
-    """Prefetch variants ordered by ID to attach variant_list for card displays."""
+    """
+    Prefetch variants grouped by type then ordered by id, to attach
+    variant_list. Sorted by variant_type first so a `{% regroup %}` over
+    variant_list (PDP, Spotlight) clusters same-type variants together
+    instead of interleaving e.g. Size and Qty rows.
+    """
     return Prefetch(
         "variants",
-        queryset=ProductVariant.objects.order_by("id"),
+        queryset=ProductVariant.objects.order_by("variant_type", "id"),
         to_attr="variant_list",
     )
 
@@ -428,7 +433,9 @@ def get_product_detail(*, slug: str) -> Optional[Product]:
         .prefetch_related(
             Prefetch(
                 "variants",
-                queryset=ProductVariant.objects.order_by("id"),
+                #sorted by type first so {% regroup %} in pdp.html clusters
+                #same-type variants together instead of interleaving them.
+                queryset=ProductVariant.objects.order_by("variant_type", "id"),
                 to_attr="variant_list",
             ),
             Prefetch(
@@ -766,7 +773,6 @@ def get_related_products(*, product: Product, user: Optional[Any] = None, limit:
     3) Fallback to active products in general.
     Optimized with select_related for brand, and prefetches primary images.
     """
-    #explicit related products
     explicit_ids = list(
         ProductRelation.objects.filter(
             product=product,
@@ -781,7 +787,6 @@ def get_related_products(*, product: Product, user: Optional[Any] = None, limit:
         .only(*PLP_CARD_FIELDS)
     )
     
-    #fallback to products sharing a collection
     if len(products) < limit:
         needed = limit - len(products)
         exclude_ids = [product.pk] + [p.pk for p in products]
@@ -796,7 +801,6 @@ def get_related_products(*, product: Product, user: Optional[Any] = None, limit:
         )
         products.extend(list(collection_products))
         
-    #general active products fallback if still not enough
     if len(products) < limit:
         needed = limit - len(products)
         exclude_ids = [product.pk] + [p.pk for p in products]
@@ -809,7 +813,6 @@ def get_related_products(*, product: Product, user: Optional[Any] = None, limit:
         )
         products.extend(list(fallback_products))
 
-    #decorate with display_price
     from marketing.selectors import get_flash_sale_discounts_for_products
 
     flash_discounts = get_flash_sale_discounts_for_products(

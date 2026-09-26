@@ -20,5 +20,4 @@ class OrderConfirmedPluginRegistry:
                 # Log the exception so one failing plugin doesn't stop others
                 logger.error(f"Error executing plugin {plugin.__name__}: {e}")
 
-#global registry instance
 order_confirmed_registry = OrderConfirmedPluginRegistry()

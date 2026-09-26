@@ -45,16 +45,6 @@
       <span class="product-badge product-badge--express">{{ site_settings.bestseller_label }}</span>
       {% elif force_badge == 'new' %}
       <span class="product-badge product-badge--new">{{ site_settings.new_arrival_label }}</span>
-      {% else %}
-      <!--
-      {% if product.is_featured %}
-      <span class="product-badge product-badge--same-day">{{ site_settings.featured_label }}</span>
-      {% elif product.is_bestseller %}
-      <span class="product-badge product-badge--express">{{ site_settings.bestseller_label }}</span>
-      {% elif product.is_new_arrival %}
-      <span class="product-badge product-badge--new">{{ site_settings.new_arrival_label }}</span>
-      {% endif %}
-      -->
       {% endif %}
 
       {% if eff_stock <= 0 %}

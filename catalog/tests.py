@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
+
 from django.db.models import ProtectedError
 from django.test import TestCase
+from django.urls import reverse
 
 from accounts.services import register_customer_email
 from catalog.models import Product, ProductVariant
@@ -97,3 +100,57 @@ class ProductVariantDeleteProtectionTests(TestCase):
     def test_deleting_variant_referenced_by_order_raises_protected_error(self) -> None:
         with self.assertRaises(ProtectedError):
             self.variant.delete()
+
+
+class MultiVariantTypeGroupingTests(TestCase):
+    """SIRI-HOM-005: a product with more than one variant_type (e.g. Size AND Qty)
+    must show every group, not just the first one — both the PDP page and the
+    homepage Spotlight section regroup variant_list by variant_type."""
+
+    def setUp(self) -> None:
+        self.product = Product.objects.create(
+            name="Multi Variant Saree",
+            slug="multi-variant-saree",
+            sku="SKU-MULTI-1",
+            base_price="1000.00",
+            mrp="1200.00",
+            purchase_price="600.00",
+            is_active=True,
+        )
+        ProductVariant.objects.create(
+            product=self.product, variant_type="Size", name="S",
+            base_price="1000.00", mrp="1200.00", purchase_price="600.00",
+            stock_quantity=5, is_default=True,
+        )
+        ProductVariant.objects.create(
+            product=self.product, variant_type="Size", name="M",
+            base_price="1000.00", mrp="1200.00", purchase_price="600.00",
+            stock_quantity=5,
+        )
+        ProductVariant.objects.create(
+            product=self.product, variant_type="Qty", name="1 Pc",
+            base_price="1000.00", mrp="1200.00", purchase_price="600.00",
+            stock_quantity=5,
+        )
+        ProductVariant.objects.create(
+            product=self.product, variant_type="Qty", name="2 Pc",
+            base_price="1900.00", mrp="2200.00", purchase_price="1100.00",
+            stock_quantity=5,
+        )
+
+    def test_quick_view_variants_json_includes_type_per_variant(self) -> None:
+        data = json.loads(self.product.quick_view_variants_json)
+        by_name = {item["name"]: item["type"] for item in data}
+        self.assertEqual(by_name["S"], "Size")
+        self.assertEqual(by_name["M"], "Size")
+        self.assertEqual(by_name["1 Pc"], "Qty")
+        self.assertEqual(by_name["2 Pc"], "Qty")
+
+    def test_pdp_renders_both_variant_type_groups(self) -> None:
+        response = self.client.get(reverse("catalog:pdp", kwargs={"slug": self.product.slug}))
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn("Size", content)
+        self.assertIn("Qty", content)
+        for variant_name in ("S", "M", "1 Pc", "2 Pc"):
+            self.assertIn(variant_name, content)

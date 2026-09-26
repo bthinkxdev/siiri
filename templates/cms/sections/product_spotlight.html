@@ -24,10 +24,8 @@
         {% endif %}
 
         <p class="jm-spotlight__price">
-          {% money_label price_data.price display_currency %}
-          {% if price_data.has_mrp_discount == "true" %}
-          <span class="jm-spotlight__was">{% money_label price_data.mrp display_currency %}</span>
-          {% endif %}
+          <span id="jm-spotlight-price-value">{% money_label price_data.price display_currency %}</span>
+          <span class="jm-spotlight__was" id="jm-spotlight-price-mrp" {% if price_data.has_mrp_discount != "true" %}style="display: none;"{% endif %}>{% money_label price_data.mrp display_currency %}</span>
         </p>
 
         {% if section_context.service_highlights %}
@@ -50,16 +48,21 @@
           {% endif %}
 
           {% if product.variant_list %}
+          {% regroup product.variant_list by variant_type as spotlight_variant_groups %}
+          {% for group in spotlight_variant_groups %}
           <div class="jm-spotlight__field">
-            <span class="jm-spotlight__field-label">{% trans "Size" %}:</span>
-            <div class="jm-spotlight__sizes" data-spotlight-sizes>
-              {% for v in product.variant_list %}
+            <span class="jm-spotlight__field-label">{{ group.grouper|default:"Option"|title }}:</span>
+            <div class="jm-spotlight__sizes" data-spotlight-sizes
+              data-variants-json="{{ product.quick_view_variants_json }}"
+              data-currency-symbol="{{ display_currency.symbol }}">
+              {% for v in group.list %}
               <button type="button"
                 class="jm-spotlight__size{% if v.pk == target_variant.pk %} is-active{% endif %}{% if v.stock_quantity <= 0 %} is-oos{% endif %}"
                 data-variant-id="{{ v.pk }}" {% if v.stock_quantity <= 0 %}disabled{% endif %}>{{ v.name }}</button>
               {% endfor %}
             </div>
           </div>
+          {% endfor %}
           {% endif %}
         </div>
 
@@ -87,7 +90,7 @@
             <input type="hidden" name="variant_id" value="{{ section_context.selected_variant_id }}" data-spotlight-variant-input>
             <button type="submit" name="buy_now" value="true" class="btn btn-floward jm-pdp-btn jm-pdp-btn--primary"
               {% if not price_data.is_in_stock %}disabled{% endif %}>
-              {% trans "Buy Now" %} <span aria-hidden="true">&rarr;</span>
+              {% trans "Buy Now" %}
             </button>
           </form>
         </div>

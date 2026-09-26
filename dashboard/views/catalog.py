@@ -590,6 +590,17 @@ class ReviewListView(DashboardListView):
     ]
 
 
+def _clear_review_pending_notification(review: Review) -> None:
+    from notifications.models import Notification
+
+    body_text = f'Review "{review.title}" on {review.product.name} awaits approval.'
+    Notification.objects.filter(
+        title="Review pending moderation",
+        body=body_text,
+        is_read=False,
+    ).update(is_read=True)
+
+
 class ReviewUpdateView(DashboardUpdateView):
     model = Review
     form_class = forms.ReviewForm
@@ -599,17 +610,7 @@ class ReviewUpdateView(DashboardUpdateView):
 
     def form_valid(self, form):
         form.instance.moderated_by = self.request.user
-        
-        #clear notification 
-        original_review = self.get_object()
-        from notifications.models import Notification
-        body_text = f'Review "{original_review.title}" on {original_review.product.name} awaits approval.'
-        Notification.objects.filter(
-            title="Review pending moderation", 
-            body=body_text,
-            is_read=False
-        ).update(is_read=True)
-        
+        _clear_review_pending_notification(self.get_object())
         return super().form_valid(form)
 
 
@@ -620,14 +621,5 @@ class ReviewDeleteView(DashboardDeleteView):
     singular_name = "Review"
 
     def form_valid(self, form):
-        #clear notification 
-        original_review = self.get_object()
-        from notifications.models import Notification
-        body_text = f'Review "{original_review.title}" on {original_review.product.name} awaits approval.'
-        Notification.objects.filter(
-            title="Review pending moderation", 
-            body=body_text,
-            is_read=False
-        ).update(is_read=True)
-        
+        _clear_review_pending_notification(self.get_object())
         return super().form_valid(form)

@@ -355,7 +355,6 @@ class Product(TimeStampedModel):
         help_text="Triggers low-stock alerts when stock falls at or below this value.",
     )
 
-    #shipping dimensions
     weight = models.DecimalField(max_digits=8, decimal_places=3, null=True, blank=True, verbose_name="Weight (kg)", help_text="Weight in kilograms, used for courier booking.")
     length = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, verbose_name="Length (cm)", help_text="Length in centimeters.")
     width = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, verbose_name="Width (cm)", help_text="Width (breadth) in centimeters.")
@@ -440,6 +439,7 @@ class Product(TimeStampedModel):
             data.append({
                 "id": str(v.pk),
                 "name": v.name,
+                "type": v.variant_type,
                 "stock": v.stock_quantity,
                 "thresh": getattr(v, "low_stock_threshold", self.low_stock_threshold),
                 "price": str(eff_price),
