@@ -1,7 +1,0 @@
-{% load i18n %}
-<div id="explore-categories-section">
-    {% for section in section_context.category_sections %}
-        {% url 'catalog:plp-category' category_slug=section.category.slug as cat_url %}
-        {% include "cms/sections/_product_rail_section.html" with title=section.category.name view_all=cat_url products=section.products rail_style="single_row" %}
-    {% endfor %}
-</div>

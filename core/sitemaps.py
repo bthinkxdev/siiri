@@ -5,7 +5,7 @@ from __future__ import annotations
 from django.contrib.sitemaps import Sitemap
 from django.utils import timezone
 
-from catalog.models import Category, Product
+from catalog.models import Collection, Product
 from cms.models import BlogPost, Page
 
 
@@ -23,20 +23,20 @@ class ProductSitemap(Sitemap):
         return obj.updated_at
 
 
-class CategorySitemap(Sitemap):
-    """Active category PLP URLs."""
+class CollectionSitemap(Sitemap):
+    """Active collection PLP URLs."""
 
     changefreq = "weekly"
     priority = 0.7
     i18n = True
 
     def items(self):
-        return Category.objects.filter(is_active=True).order_by("display_order", "name")
+        return Collection.objects.filter(is_active=True).order_by("display_order", "name")
 
-    def location(self, obj: Category):
+    def location(self, obj: Collection):
         from django.urls import reverse
 
-        return reverse("catalog:plp-category", kwargs={"category_slug": obj.slug})
+        return reverse("catalog:plp-collection", kwargs={"collection_slug": obj.slug})
 
 
 

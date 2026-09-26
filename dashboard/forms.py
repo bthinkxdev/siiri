@@ -8,13 +8,17 @@ from django.utils.text import slugify
 from accounts.models import CustomerProfile
 from catalog.models import (
     Brand,
-    Category,
+    Collection,
+    Fabric,
+    Grade,
+    Occasion,
     Product,
     ProductImage,
     ProductSpecification,
     ProductVariant,
     Review,
     SizeChart,
+    Style,
 )
 from cms.models import BlogPost, FAQItem, HeroSlide, HomepageSection, Page, PolicyDocument, PromoBanner, ServiceHighlight, Testimonial, HomeVideo, MemoryPhoto
 from core.models import SiteSettings, Currency
@@ -46,7 +50,11 @@ class ProductForm(SlugAutoMixin):
             "slug",
             "sku",
             "hsn_code",
-            "category",
+            "collections",
+            "styles",
+            "fabrics",
+            "occasions",
+            "grades",
             "brand",
             "size_chart",
             "base_price",
@@ -71,10 +79,16 @@ class ProductForm(SlugAutoMixin):
             "width",
             "height",
         ]
+        widgets = {
+            "collections": forms.CheckboxSelectMultiple,
+            "styles": forms.CheckboxSelectMultiple,
+            "fabrics": forms.CheckboxSelectMultiple,
+            "occasions": forms.CheckboxSelectMultiple,
+            "grades": forms.CheckboxSelectMultiple,
+        }
         error_messages = {
             "name": {"required": "Product name is required."},
             "sku": {"required": "SKU is required."},
-            "category": {"required": "Category is required."},
             "base_price": {"required": "Base price is required."},
             "mrp": {"required": "MRP is required."},
             "purchase_price": {"required": "Purchase price is required."},
@@ -86,6 +100,8 @@ class ProductForm(SlugAutoMixin):
         if not is_enabled("brands"):
             #field is hidden while Brands is OFF; dropping it keeps an existing brand intact on save
             self.fields.pop("brand", None)
+        for field_name in ("collections", "styles", "fabrics", "occasions", "grades"):
+            self.fields[field_name].required = False
         for field_name in ("description", "care_instructions"):
             self.fields[field_name].widget.attrs["class"] = "tinymce-editor"
             self.fields[field_name].widget.attrs["style"] = "visibility: hidden; height: 260px;"
@@ -111,13 +127,12 @@ class ProductForm(SlugAutoMixin):
         return cleaned
 
 
-class CategoryForm(SlugAutoMixin):
+class CollectionForm(SlugAutoMixin):
     class Meta:
-        model = Category
+        model = Collection
         fields = [
             "name",
             "slug",
-            "parent",
             "display_order",
             "is_active",
             "show_on_homepage",
@@ -130,6 +145,38 @@ class CategoryForm(SlugAutoMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["slug"].required = False
+
+
+class _FacetForm(SlugAutoMixin):
+    """Shared form shape for the flat Style/Fabric/Occasion/Grade facets."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["slug"].required = False
+
+
+class StyleForm(_FacetForm):
+    class Meta:
+        model = Style
+        fields = ["name", "slug", "display_order", "is_active"]
+
+
+class FabricForm(_FacetForm):
+    class Meta:
+        model = Fabric
+        fields = ["name", "slug", "display_order", "is_active"]
+
+
+class OccasionForm(_FacetForm):
+    class Meta:
+        model = Occasion
+        fields = ["name", "slug", "display_order", "is_active"]
+
+
+class GradeForm(_FacetForm):
+    class Meta:
+        model = Grade
+        fields = ["name", "slug", "display_order", "is_active"]
 
 
 
@@ -340,7 +387,7 @@ class CouponForm(forms.ModelForm):
             "max_uses_per_customer",
             "valid_from",
             "valid_until",
-            "applicable_categories",
+            "applicable_collections",
             "is_active",
         ]
         widgets = {"valid_from": _DATETIME, "valid_until": _DATETIME}
@@ -649,6 +696,9 @@ class SiteSettingsForm(forms.ModelForm):
         "default_currency",
         "razorpay_key_id",
         "razorpay_key_secret",
+        "featured_label",
+        "bestseller_label",
+        "new_arrival_label",
         "delivery_integration_enabled",
         "brands_enabled",
         "subscriptions_enabled",
@@ -678,6 +728,9 @@ class SiteSettingsForm(forms.ModelForm):
             "cod_delivery_charge",
             "razorpay_key_id",
             "razorpay_key_secret",
+            "featured_label",
+            "bestseller_label",
+            "new_arrival_label",
             "delivery_integration_enabled",
             "brands_enabled",
             "subscriptions_enabled",

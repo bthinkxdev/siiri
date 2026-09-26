@@ -26,10 +26,10 @@
         </div>
       </div>
       <div class="col-6 col-md-auto">
-        <select name="category" class="form-select">
-          <option value="">All categories</option>
-          {% for cat in categories %}
-          <option value="{{ cat.pk }}" {% if category_filter == cat.pk|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+        <select name="collection" class="form-select">
+          <option value="">All collections</option>
+          {% for coll in collections %}
+          <option value="{{ coll.pk }}" {% if collection_filter == coll.pk|stringformat:"s" %}selected{% endif %}>{{ coll.name }}</option>
           {% endfor %}
         </select>
       </div>
@@ -44,7 +44,7 @@
       </div>
       <div class="col-12 col-md-auto d-flex align-items-center gap-2">
         <button type="submit" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Filter</button>
-        {% if status_filter or category_filter %}
+        {% if status_filter or collection_filter %}
         <a href="{% url 'dashboard:product-list' %}" class="btn btn-outline-secondary flex-fill flex-md-grow-0">Clear</a>
         {% endif %}
       </div>
@@ -58,7 +58,7 @@
       <tr>
         <th>Product</th>
         <th>SKU</th>
-        <th>Category</th>
+        <th>Collections</th>
         <th>Stock</th>
         <th>Status</th>
         <th>Pinned</th>
@@ -84,8 +84,10 @@
           </div>
         </td>
         <td class="text-nowrap"><span class="text-secondary">{{ obj.sku }}</span></td>
-        <td>{% if obj.category_id %}<span class="pill pill-gray">{{ obj.category.name }}</span>{% else %}<span
-            class="text-secondary">—</span>{% endif %}</td>
+        <td>
+          {% for collection in obj.collections.all %}<span class="pill pill-gray">{{ collection.name }}</span>{% empty %}<span
+            class="text-secondary">—</span>{% endfor %}
+        </td>
         <td>
           {% if obj.stock_quantity == 0 %}
           <span class="pill pill-red">Out of stock</span>

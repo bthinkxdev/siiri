@@ -10,6 +10,7 @@ from django.core.paginator import Paginator
 from django.db.models import Avg, Count, F, Prefetch, Q, QuerySet, Case, When, Value, IntegerField
 
 from catalog.models import (
+    Collection,
     ModerationStatus,
     Product,
     ProductDocument,
@@ -36,13 +37,12 @@ PLP_CARD_FIELDS: tuple[str, ...] = (
     "is_new_arrival",
     "stock_quantity",
     "low_stock_threshold",
-    "category_id",
     "brand_id",
 )
 
 HOMEPAGE_RAIL_LIMIT = 12
-CATEGORY_TREE_CACHE_KEY = "catalog:category_tree:v1"
-CATEGORY_TREE_TTL = 300
+SHOP_BY_CACHE_KEY = "catalog:shop_by:v1"
+SHOP_BY_TTL = 300
 DEFAULT_CURRENCY_CACHE_KEY = "core:default_currency:v1"
 DEFAULT_CURRENCY_TTL = 300
 
@@ -85,7 +85,7 @@ def _homepage_rail_queryset(*, filters: Q, ordering: tuple = ("-created_at",)) -
     return (
         Product.objects.filter(is_active=True)
         .filter(filters)
-        .select_related("category", "brand")
+        .select_related("brand")
         .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
         .only(*PLP_CARD_FIELDS)
         .annotate(
@@ -139,15 +139,14 @@ def get_homepage_product_rails() -> dict[str, list[Product]]:
     return rails
 
 
-def get_products_by_category_slug(slug: str, limit: int | None = None) -> list[Product]:
-    """Fetch products for a category, optionally limited. Decorates prices."""
+def get_products_by_collection_slug(slug: str, limit: int | None = None) -> list[Product]:
+    """Fetch products for a collection, optionally limited. Decorates prices."""
     approved = Q(reviews__moderation_status=ModerationStatus.APPROVED)
-    cat_filter = Q(category__slug=slug) | Q(category__parent__slug=slug)
-    
+
     qs = (
         Product.objects.filter(is_active=True)
-        .filter(cat_filter)
-        .select_related("category", "brand")
+        .filter(collections__slug=slug)
+        .select_related("brand")
         .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
         .only(*PLP_CARD_FIELDS)
         .annotate(
@@ -211,15 +210,35 @@ def _decorate_homepage_rail_prices(rails: dict[str, list[Product]]) -> None:
 
 def _apply_plp_filters(queryset: QuerySet[Product], filters: dict[str, Any]) -> QuerySet[Product]:
     """Apply PLP filter dict to a base queryset."""
-    if category_id := filters.get("category_id"):
-        from catalog.models import Category
-        category_ids = [category_id]
-        category_ids.extend(
-            Category.objects.filter(parent_id=category_id, is_active=True).values_list(
-                "id", flat=True
-            )
+    needs_distinct = False
+    if collection_id := filters.get("collection_id"):
+        queryset = queryset.filter(collections__id=collection_id)
+        needs_distinct = True
+    if style_id := filters.get("style_id"):
+        queryset = queryset.filter(styles__id=style_id)
+        needs_distinct = True
+    if fabric_id := filters.get("fabric_id"):
+        queryset = queryset.filter(fabrics__id=fabric_id)
+        needs_distinct = True
+    if occasion_id := filters.get("occasion_id"):
+        queryset = queryset.filter(occasions__id=occasion_id)
+        needs_distinct = True
+    if grade_id := filters.get("grade_id"):
+        queryset = queryset.filter(grades__id=grade_id)
+        needs_distinct = True
+    if q := filters.get("q"):
+        queryset = queryset.filter(
+            Q(name__icontains=q)
+            | Q(description__icontains=q)
+            | Q(sku__iexact=q)
+            | Q(brand__name__icontains=q)
+            | Q(collections__name__icontains=q)
+            | Q(styles__name__icontains=q)
+            | Q(fabrics__name__icontains=q)
+            | Q(occasions__name__icontains=q)
+            | Q(grades__name__icontains=q)
         )
-        queryset = queryset.filter(category_id__in=category_ids)
+        needs_distinct = True
     if brand_id := filters.get("brand_id"):
         queryset = queryset.filter(brand_id=brand_id)
     if color := filters.get("color"):
@@ -236,6 +255,8 @@ def _apply_plp_filters(queryset: QuerySet[Product], filters: dict[str, Any]) -> 
         queryset = queryset.filter(base_price__gte=min_price)
     if max_price := filters.get("max_price"):
         queryset = queryset.filter(base_price__lte=max_price)
+    if needs_distinct:
+        queryset = queryset.distinct()
     return queryset
 
 
@@ -287,7 +308,7 @@ def get_plp_products(
     filters = filters or {}
     queryset = (
         Product.objects.filter(is_active=True)
-        .select_related("category", "brand")
+        .select_related("brand")
         .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
         .only(*PLP_CARD_FIELDS)
         .annotate(
@@ -341,7 +362,7 @@ def get_plp_products(
 
 def get_product_detail(*, slug: str) -> Optional[Product]:
     """
-    1) product + select_related(category, brand)
+    1) product + select_related(brand) + collections prefetch
     2) variants prefetch
     3) images prefetch (ordered)
     4) videos prefetch
@@ -371,7 +392,6 @@ def get_product_detail(*, slug: str) -> Optional[Product]:
         )
         .select_related(
             "related_product",
-            "related_product__category",
             "related_product__brand",
         )
         .prefetch_related(
@@ -390,7 +410,6 @@ def get_product_detail(*, slug: str) -> Optional[Product]:
         )
         .select_related(
             "related_product",
-            "related_product__category",
             "related_product__brand",
         )
         .prefetch_related(
@@ -405,7 +424,7 @@ def get_product_detail(*, slug: str) -> Optional[Product]:
 
     return (
         Product.objects.filter(is_active=True, slug=slug)
-        .select_related("category", "brand")
+        .select_related("brand")
         .prefetch_related(
             Prefetch(
                 "variants",
@@ -427,6 +446,10 @@ def get_product_detail(*, slug: str) -> Optional[Product]:
             Prefetch(
                 "documents",
                 queryset=ProductDocument.objects.order_by("display_order", "title"),
+            ),
+            Prefetch(
+                "collections",
+                queryset=Collection.objects.order_by("display_order", "name"),
             ),
             approved_reviews_prefetch,
             related_prefetch,
@@ -484,7 +507,7 @@ def get_recently_viewed(
 
     products = (
         Product.objects.filter(id__in=product_ids, is_active=True)
-        .select_related("category", "brand")
+        .select_related("brand")
         .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
         .only(*PLP_CARD_FIELDS)
     )
@@ -492,79 +515,84 @@ def get_recently_viewed(
     return [product_map[pid] for pid in product_ids if pid in product_map]
 
 
-def get_category_tree() -> list:
-    """
-    Return active root categories with prefetched children for the mega menu.
+def get_active_collections() -> list:
+    """Return active collections ordered for navigation/homepage rails."""
+    return list(Collection.objects.filter(is_active=True).order_by("display_order", "name"))
 
-    Query guarantee: 2 queries (roots + children prefetch); cached 5 minutes.
-    """
-    from catalog.models import Category
 
-    cached = cache.get(CATEGORY_TREE_CACHE_KEY)
+def get_shop_by_facets() -> dict[str, list]:
+    """
+    Return the five "Shop By" facet lists (collections/styles/fabrics/occasions/
+    grades) for the header mega-panel and mobile nav.
+
+    Query guarantee: 5 queries; cached 5 minutes.
+    """
+    from catalog.models import Fabric, Grade, Occasion, Style
+
+    cached = cache.get(SHOP_BY_CACHE_KEY)
     if cached is not None:
         return cached
 
-    tree = list(
-        Category.objects.filter(is_active=True, parent__isnull=True)
-        .prefetch_related(
-            Prefetch(
-                "children",
-                queryset=Category.objects.filter(is_active=True).order_by("display_order", "name"),
-            )
-        )
-        .order_by("display_order", "name")
-    )
-    cache.set(CATEGORY_TREE_CACHE_KEY, tree, CATEGORY_TREE_TTL)
-    return tree
+    facets = {
+        "collections": get_active_collections(),
+        "styles": list(Style.objects.filter(is_active=True).order_by("display_order", "name")),
+        "fabrics": list(Fabric.objects.filter(is_active=True).order_by("display_order", "name")),
+        "occasions": list(Occasion.objects.filter(is_active=True).order_by("display_order", "name")),
+        "grades": list(Grade.objects.filter(is_active=True).order_by("display_order", "name")),
+    }
+    cache.set(SHOP_BY_CACHE_KEY, facets, SHOP_BY_TTL)
+    return facets
 
 
-def invalidate_category_tree_cache() -> None:
-    """Clear cached navigation tree after category mutations."""
-    cache.delete(CATEGORY_TREE_CACHE_KEY)
+def invalidate_shop_by_cache() -> None:
+    """Clear cached "Shop By" facet lists after a taxonomy mutation."""
+    cache.delete(SHOP_BY_CACHE_KEY)
 
 
-def get_search_suggestions(*, query: str, limit: int = 8) -> dict[str, list]:
+def get_search_suggestions(*, query: str, limit: int = 8) -> dict[str, Any]:
     """
-    Return product, brand, category, and equipment type matches for HTMX live search.
+    Return product, brand, and collection matches for HTMX live search.
+
+    `total_count` is the full matching product count (uncapped by `limit`), used to
+    show a "View all N results" link even when the dropdown itself only lists a few.
     """
     if not query or len(query.strip()) < 2:
         return {
             "products": [],
             "brands": [],
-            "categories": [],
-            "equipment_types": [],
+            "collections": [],
+            "total_count": 0,
         }
 
-    from catalog.models import Brand, Category
+    from catalog.models import Brand, Collection
 
     clean_query = query.strip()
+    product_matches = (
+        Product.objects.filter(is_active=True)
+        .filter(
+            Q(name__icontains=clean_query)
+            | Q(description__icontains=clean_query)
+            | Q(sku__iexact=clean_query)
+        )
+        .distinct()
+    )
+    total_count = product_matches.count()
     products = list(
-        Product.objects.filter(is_active=True, name__icontains=clean_query)
-        .select_related("category")
-        .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
+        product_matches.prefetch_related(_primary_image_prefetch(), _variants_prefetch())
         .only(*PLP_CARD_FIELDS)[:limit]
     )
 
     brands = list(Brand.objects.filter(name__icontains=clean_query)[:5])
+    collections = list(
+        Collection.objects.filter(is_active=True, name__icontains=clean_query)[:5]
+    )
 
     return {
         "products": products,
         "brands": brands,
-        "categories": [],
-        "equipment_types": [],
+        "collections": collections,
+        "total_count": total_count,
     }
-
-
-def get_root_categories(*, category_ids: list[int] | None = None) -> list:
-    """Return root categories for homepage shop-by-category rail."""
-    from catalog.models import Category
-
-    qs = Category.objects.filter(is_active=True, parent__isnull=True).order_by(
-        "display_order", "name"
-    )
-    if category_ids:
-        qs = qs.filter(pk__in=category_ids)
-    return list(qs)
 
 
 def get_featured_brands(*, brand_ids: list[int] | None = None) -> list:
@@ -581,15 +609,15 @@ def get_products_for_section_config(*, config: dict) -> list[Product]:
     """
     Return products for collection sections driven by CMS config JSON.
 
-    Config keys: product_ids, category_id, brand_id, recipient_id, min_price,
+    Config keys: product_ids, collection_id, brand_id, min_price,
     limit, flags (model booleans).
     Query guarantee: 1 SELECT + 1 primary-image prefetch.
     """
     qs = Product.objects.filter(is_active=True)
     if product_ids := config.get("product_ids"):
         qs = qs.filter(pk__in=product_ids)
-    if category_id := config.get("category_id"):
-        qs = qs.filter(category_id=category_id)
+    if collection_id := config.get("collection_id"):
+        qs = qs.filter(collections__id=collection_id).distinct()
     if brand_id := config.get("brand_id"):
         qs = qs.filter(brand_id=brand_id)
     if min_price := config.get("min_price"):
@@ -599,7 +627,7 @@ def get_products_for_section_config(*, config: dict) -> list[Product]:
             qs = qs.filter(**{flag: True})
     limit = config.get("limit", HOMEPAGE_RAIL_LIMIT)
     return list(
-        qs.select_related("category", "brand")
+        qs.select_related("brand")
         .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
         .only(*PLP_CARD_FIELDS)
         .order_by("-created_at")[:limit]
@@ -676,26 +704,21 @@ def get_variant_price(
     return result
 
 
-def get_category_by_slug(*, slug: str):
-    """Return an active category by slug. Query guarantee: 1 SELECT."""
-    from catalog.models import Category
-
-    return Category.objects.filter(slug=slug, is_active=True).first()
+def get_collection_by_slug(*, slug: str):
+    """Return an active collection by slug. Query guarantee: 1 SELECT."""
+    return Collection.objects.filter(slug=slug, is_active=True).first()
 
 
 def get_plp_filter_options() -> dict:
-    """Return sidebar filter options for PLP."""
-    from catalog.models import Category
-    categories = list(Category.objects.filter(is_active=True, parent__isnull=True).prefetch_related("children").order_by("display_order", "name"))
-    
-    subcategories_map = {}
-    for cat in categories:
-        subcategories_map[cat.pk] = [{"pk": child.pk, "name": child.name} for child in cat.children.all() if child.is_active]
-        
+    """Return sidebar filter options for PLP: collections, brands, and the four facets."""
+    facets = get_shop_by_facets()
     return {
-        "categories": categories,
+        "collections": facets["collections"],
+        "styles": facets["styles"],
+        "fabrics": facets["fabrics"],
+        "occasions": facets["occasions"],
+        "grades": facets["grades"],
         "brands": get_featured_brands(),
-        "subcategories_map": subcategories_map,
     }
 
 
@@ -711,7 +734,7 @@ def get_product_for_cart_add(
     """
     product = (
         Product.objects.filter(pk=product_id, is_active=True)
-        .select_related("category", "brand")
+        .select_related("brand")
         .first()
     )
     if product is None:
@@ -739,9 +762,9 @@ def get_related_products(*, product: Product, user: Optional[Any] = None, limit:
     """
     Return related products for a product.
     1) Query explicit RELATED relationships.
-    2) Fallback to active products in the same category.
+    2) Fallback to active products sharing a collection.
     3) Fallback to active products in general.
-    Optimized with select_related for category and brand, and prefetches primary images.
+    Optimized with select_related for brand, and prefetches primary images.
     """
     #explicit related products
     explicit_ids = list(
@@ -753,23 +776,25 @@ def get_related_products(*, product: Product, user: Optional[Any] = None, limit:
     
     products = list(
         Product.objects.filter(pk__in=explicit_ids, is_active=True)
-        .select_related("category", "brand")
+        .select_related("brand")
         .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
         .only(*PLP_CARD_FIELDS)
     )
     
-    #fallback to same category
+    #fallback to products sharing a collection
     if len(products) < limit:
         needed = limit - len(products)
         exclude_ids = [product.pk] + [p.pk for p in products]
-        cat_products = (
-            Product.objects.filter(category=product.category, is_active=True)
+        collection_ids = list(product.collections.values_list("id", flat=True))
+        collection_products = (
+            Product.objects.filter(collections__id__in=collection_ids, is_active=True)
             .exclude(pk__in=exclude_ids)
-            .select_related("category", "brand")
+            .select_related("brand")
             .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
+            .distinct()
             .only(*PLP_CARD_FIELDS)[:needed]
         )
-        products.extend(list(cat_products))
+        products.extend(list(collection_products))
         
     #general active products fallback if still not enough
     if len(products) < limit:
@@ -778,7 +803,7 @@ def get_related_products(*, product: Product, user: Optional[Any] = None, limit:
         fallback_products = (
             Product.objects.filter(is_active=True)
             .exclude(pk__in=exclude_ids)
-            .select_related("category", "brand")
+            .select_related("brand")
             .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
             .only(*PLP_CARD_FIELDS)[:needed]
         )

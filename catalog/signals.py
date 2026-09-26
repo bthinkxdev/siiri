@@ -6,14 +6,22 @@ from django.db import models
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from catalog.models import Category, Product
-from catalog.selectors import invalidate_category_tree_cache
+from catalog.models import Collection, Fabric, Grade, Occasion, Product, Style
+from catalog.selectors import invalidate_shop_by_cache
 
 
-@receiver(post_save, sender=Category)
-@receiver(post_delete, sender=Category)
-def category_changed(sender, instance: Category, **kwargs) -> None:
-    invalidate_category_tree_cache()
+@receiver(post_save, sender=Collection)
+@receiver(post_delete, sender=Collection)
+@receiver(post_save, sender=Style)
+@receiver(post_delete, sender=Style)
+@receiver(post_save, sender=Fabric)
+@receiver(post_delete, sender=Fabric)
+@receiver(post_save, sender=Occasion)
+@receiver(post_delete, sender=Occasion)
+@receiver(post_save, sender=Grade)
+@receiver(post_delete, sender=Grade)
+def shop_by_facet_changed(sender, instance, **kwargs) -> None:
+    invalidate_shop_by_cache()
 
 
 @receiver(post_save, sender=Product)

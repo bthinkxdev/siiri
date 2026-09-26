@@ -93,22 +93,22 @@ class InstagramConfigForm(BaseSectionConfigForm):
         }
 
 
-class CategoryProductsConfigForm(BaseSectionConfigForm):
-    category_slug = forms.ChoiceField(
+class CollectionProductsConfigForm(BaseSectionConfigForm):
+    collection_slug = forms.ChoiceField(
         required=False,
-        help_text="Select 'All Categories' to show a grid for every category, or select a specific category."
+        help_text="Select 'All Collections' to show a grid for every collection, or select a specific collection."
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        from catalog.models import Category
+        from catalog.models import Collection
         try:
-            choices = [("all", "All Categories")]
-            for cat in Category.objects.filter(is_active=True, parent__isnull=True):
-                choices.append((cat.slug, cat.name))
-            self.fields["category_slug"].choices = choices
+            choices = [("all", "All Collections")]
+            for collection in Collection.objects.filter(is_active=True):
+                choices.append((collection.slug, collection.name))
+            self.fields["collection_slug"].choices = choices
         except Exception:
-            self.fields["category_slug"].choices = [("all", "All Categories")]
+            self.fields["collection_slug"].choices = [("all", "All Collections")]
 
 
 class MemoriesConfigForm(BaseSectionConfigForm):
@@ -121,7 +121,7 @@ class EmptyConfigForm(BaseSectionConfigForm):
 
 SECTION_CONFIG_FORMS: dict[str, type[BaseSectionConfigForm]] = {
     HomepageSectionType.HERO_SLIDER: HeroSliderConfigForm,
-    HomepageSectionType.SHOP_BY_CATEGORY: EmptyConfigForm,
+    HomepageSectionType.SHOP_BY_COLLECTION: EmptyConfigForm,
     HomepageSectionType.FEATURED_PRODUCTS: EmptyConfigForm,
     HomepageSectionType.NEW_ARRIVALS: EmptyConfigForm,
     HomepageSectionType.BEST_SELLERS: EmptyConfigForm,
@@ -131,7 +131,7 @@ SECTION_CONFIG_FORMS: dict[str, type[BaseSectionConfigForm]] = {
     HomepageSectionType.REVIEWS: EmptyConfigForm,
     HomepageSectionType.INSTAGRAM_GALLERY: InstagramConfigForm,
     HomepageSectionType.NEWSLETTER: EmptyConfigForm,
-    HomepageSectionType.CATEGORY_PRODUCTS: CategoryProductsConfigForm,
+    HomepageSectionType.COLLECTION_PRODUCTS: CollectionProductsConfigForm,
     HomepageSectionType.PROMO_BANNERS: EmptyConfigForm,
     HomepageSectionType.TESTIMONIALS: EmptyConfigForm,
     HomepageSectionType.VIDEO_SECTION: EmptyConfigForm,

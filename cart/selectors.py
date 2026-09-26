@@ -198,7 +198,7 @@ def get_cart_summary(*, cart: Cart) -> CartSummary:
     Return a fully computed cart summary for drawer, checkout, and payment.
 
     Query guarantee:
-      1) cart items SELECT with select_related(product, variant, category, brand)
+      1) cart items SELECT with select_related(product, variant, brand)
       2) one gifting.get_gift_customization_snapshot call per customized line
          (each is a constant 1 SELECT + prefetches inside gifting — no cart ORM
          into gifting tables)
@@ -210,7 +210,6 @@ def get_cart_summary(*, cart: Cart) -> CartSummary:
         CartItem.objects.filter(cart=cart)
         .select_related(
             "product",
-            "product__category",
             "product__brand",
             "variant",
         )
@@ -220,6 +219,7 @@ def get_cart_summary(*, cart: Cart) -> CartSummary:
                 queryset=ProductImage.objects.filter(is_primary=True).order_by("display_order"),
                 to_attr="primary_images",
             ),
+            "product__collections",
         )
         .order_by("id")
     )
@@ -280,13 +280,17 @@ def get_cart_summary(*, cart: Cart) -> CartSummary:
     if coupon_code:
         from marketing.services import validate_coupon_for_cart
         from marketing.exceptions import InvalidCouponError
-        category_ids = [line.product.category_id for line in lines]
+        collection_ids = [
+            collection.pk
+            for line in lines
+            for collection in line.product.collections.all()
+        ]
         try:
             result = validate_coupon_for_cart(
                 code=coupon_code,
                 cart_subtotal=subtotal,
                 customer_profile_id=cart.customer_profile_id,
-                cart_category_ids=category_ids,
+                cart_collection_ids=collection_ids,
             )
             coupon_discount = result["discount_amount"]
         except InvalidCouponError:

@@ -19,6 +19,7 @@ from cart.services import get_or_create_cart
 from checkout.forms import CheckoutAddressForm, CheckoutDeliveryForm, CheckoutPaymentForm
 from checkout.selectors import get_checkout_session_by_id
 from checkout.services import create_checkout_session, place_order, update_checkout_session
+from core.decorators import rate_limit
 
 from payments.registry import PAYMENT_GATEWAYS
 from payments.services import process_payment
@@ -39,6 +40,29 @@ def _get_checkout_cart(request: HttpRequest, create: bool = False):
     if create:
         return get_or_create_cart(request=request)
     return get_cart_for_request(request=request)
+
+
+def _grant_order_session_access(request: HttpRequest, order) -> None:
+    """
+    Record that this browser session just placed `order`, so the guest
+    confirmation/payment pages can be shown without requiring login.
+
+    Order PKs are sequential and guessable — without this, anyone could view
+    another customer's confirmation/payment page (name, email, phone, total)
+    just by editing the URL.
+    """
+    owned = request.session.get("owned_order_ids", [])
+    if order.pk not in owned:
+        owned.append(order.pk)
+        request.session["owned_order_ids"] = owned
+
+
+def _can_view_order(request: HttpRequest, order) -> bool:
+    """Authenticated owner, or the guest session that just placed this order."""
+    if request.user.is_authenticated and hasattr(request.user, "customer_profile"):
+        if order.customer_profile_id == request.user.customer_profile.pk:
+            return True
+    return order.pk in request.session.get("owned_order_ids", [])
 
 
 @require_POST
@@ -227,6 +251,12 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
 
 
 @require_http_methods(["POST"])
+@rate_limit(
+    key_prefix="place_order",
+    max_requests=10,
+    window_seconds=300,
+    identifier=lambda request: request.META.get("REMOTE_ADDR", "unknown"),
+)
 def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
     """Place order and process payment in one HTMX step."""
     form = CheckoutPaymentForm(request.POST)
@@ -449,13 +479,31 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
         response["HX-Trigger"] = "stockChanged"
         return response
 
+    _grant_order_session_access(request, order)
+
     payment_data = {}
 
-    process_payment(
-        order=order,
-        gateway_key=gateway_key,
-        payment_data=payment_data,
-    )
+    from payments.exceptions import PaymentGatewayError
+    try:
+        process_payment(
+            order=order,
+            gateway_key=gateway_key,
+            payment_data=payment_data,
+        )
+    except PaymentGatewayError as exc:
+        logger.error("Payment gateway unavailable for order_id=%s: %s", order.pk, exc)
+        return render(
+            request,
+            "checkout/partials/errors.html",
+            {
+                "errors": {
+                    "__all__": [
+                        f"{exc} You can also resubmit this order with Cash on Delivery instead."
+                    ]
+                }
+            },
+            status=200,
+        )
 
     if gateway_key.startswith("razorpay"):
         pay_url = reverse("checkout:razorpay-pay", kwargs={"order_id": order.pk})
@@ -480,6 +528,8 @@ def checkout_confirmation_view(request: HttpRequest, order_id: int) -> HttpRespo
     from orders.models import Order
     from django.shortcuts import get_object_or_404
     order = get_object_or_404(Order, pk=order_id)
+    if not _can_view_order(request, order):
+        raise Http404("Order not found.")
     return render(
         request,
         "checkout/confirmation_page.html",
@@ -501,7 +551,9 @@ def razorpay_pay_view(request: HttpRequest, order_id: int) -> HttpResponse:
     from django.shortcuts import get_object_or_404
 
     order = get_object_or_404(Order, pk=order_id)
-    
+    if not _can_view_order(request, order):
+        raise Http404("Order not found.")
+
     if order.order_status != OrderStatus.CHECKOUT_PENDING:
         from django.shortcuts import redirect
         return redirect("catalog:plp")
@@ -614,6 +666,21 @@ def razorpay_callback_view(request: HttpRequest) -> HttpResponse:
     #clean up session
     request.session.pop("razorpay_order_pk", None)
 
+    #the order_id driving this lookup came from the client (POST body or
+    #session) — a signature being cryptographically valid only proves it was
+    #genuinely issued by Razorpay for *some* order, never that it belongs to
+    #*this* one. Without this check, a real signature from an unrelated,
+    #already-paid order could be replayed here to confirm a different order
+    #for free. Reject before ever calling verify_payment_signature/capture.
+    if not payment_tx or payment_tx.external_intent_id != razorpay_order_id:
+        logger.error(
+            "Razorpay callback order/intent mismatch: order_id=%s expected_intent=%s received_intent=%s",
+            order.pk, getattr(payment_tx, "external_intent_id", None), razorpay_order_id,
+        )
+        if payment_tx:
+            confirm_payment_failed(payment_transaction=payment_tx)
+        return redirect("checkout:checkout")
+
     adapter = RazorpayAdapter()
     is_valid = adapter.verify_payment_signature(
         razorpay_order_id=razorpay_order_id,
@@ -621,7 +688,7 @@ def razorpay_callback_view(request: HttpRequest) -> HttpResponse:
         razorpay_signature=razorpay_signature,
     )
 
-    if is_valid and payment_tx:
+    if is_valid:
         if not payment_tx.currency:
             default_curr = get_default_currency()
         currency_code = payment_tx.currency.code if payment_tx.currency else (default_curr.code if default_curr else "AED")
@@ -642,8 +709,7 @@ def razorpay_callback_view(request: HttpRequest) -> HttpResponse:
         confirm_payment_success(payment_transaction=payment_tx, external_transaction_id=razorpay_payment_id)
         return redirect("checkout:confirmation", order_id=order.pk)
     else:
-        if payment_tx:
-            confirm_payment_failed(payment_transaction=payment_tx)
+        confirm_payment_failed(payment_transaction=payment_tx)
         return redirect("checkout:checkout")
 
 

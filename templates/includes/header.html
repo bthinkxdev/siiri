@@ -29,8 +29,8 @@
   <div class="siri-hd__main">
     <div class="siri-hd__inner">
       <div class="siri-hd__start">
-        <button class="siri-hd__toggle d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#jmMainNav"
-          aria-controls="jmMainNav" aria-expanded="false" aria-label="{% trans 'Menu' %}">
+        <button class="siri-hd__toggle d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#jmMainNav"
+          aria-controls="jmMainNav" aria-label="{% trans 'Menu' %}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
             aria-hidden="true">
             <path d="M4 7h16M4 12h16M4 17h16" />
@@ -43,16 +43,69 @@
                 href="{% url 'cms:homepage' %}">{% trans "Home" %}</a></li>
             <li><a class="siri-nav__link {% if request.resolver_match.url_name == 'plp' %}is-active{% endif %}"
                 href="{% url 'catalog:plp' %}">{% trans "Shop" %}</a></li>
-            <li class="siri-nav__item{% if category_tree %} siri-nav__item--menu{% endif %}">
-              <a class="siri-nav__link {% if request.resolver_match.url_name == 'plp-category' %}is-active{% endif %}"
-                href="{% url 'catalog:plp' %}">{% trans "Collections" %}</a>
-              {% if category_tree %}
-              <ul class="siri-nav__sub">
-                {% for cat in category_tree %}
-                <li><a href="{% url 'catalog:plp-category' category_slug=cat.slug %}">{{ cat.name }}</a></li>
-                {% endfor %}
-              </ul>
-              {% endif %}
+            <li class="siri-nav__item siri-nav__item--menu">
+              <a class="siri-nav__link {% if request.resolver_match.url_name == 'plp-collection' %}is-active{% endif %}"
+                href="{% url 'catalog:plp' %}">{% trans "Shop By" %}</a>
+              <div class="siri-shopby">
+                <div class="siri-shopby__col">
+                  <p class="siri-shopby__heading">{% trans "Highlights" %}</p>
+                  <ul class="siri-shopby__list">
+                    <li><a href="{% url 'catalog:plp' %}?featured=1">{{ site_settings.featured_label }}</a></li>
+                    <li><a href="{% url 'catalog:plp' %}?bestseller=1">{{ site_settings.bestseller_label }}</a></li>
+                    <li><a href="{% url 'catalog:plp' %}?new_arrival=1">{{ site_settings.new_arrival_label }}</a></li>
+                  </ul>
+                </div>
+                {% if shop_by.collections %}
+                <div class="siri-shopby__col">
+                  <p class="siri-shopby__heading">{% trans "Collections" %}</p>
+                  <ul class="siri-shopby__list">
+                    {% for collection in shop_by.collections %}
+                    <li><a href="{% url 'catalog:plp-collection' collection_slug=collection.slug %}">{{ collection.name }}</a></li>
+                    {% endfor %}
+                  </ul>
+                </div>
+                {% endif %}
+                {% if shop_by.styles %}
+                <div class="siri-shopby__col">
+                  <p class="siri-shopby__heading">{% trans "Style" %}</p>
+                  <ul class="siri-shopby__list">
+                    {% for style in shop_by.styles %}
+                    <li><a href="{% url 'catalog:plp' %}?style={{ style.pk }}">{{ style.name }}</a></li>
+                    {% endfor %}
+                  </ul>
+                </div>
+                {% endif %}
+                {% if shop_by.fabrics %}
+                <div class="siri-shopby__col">
+                  <p class="siri-shopby__heading">{% trans "Fabric" %}</p>
+                  <ul class="siri-shopby__list">
+                    {% for fabric in shop_by.fabrics %}
+                    <li><a href="{% url 'catalog:plp' %}?fabric={{ fabric.pk }}">{{ fabric.name }}</a></li>
+                    {% endfor %}
+                  </ul>
+                </div>
+                {% endif %}
+                {% if shop_by.occasions %}
+                <div class="siri-shopby__col">
+                  <p class="siri-shopby__heading">{% trans "Occasion" %}</p>
+                  <ul class="siri-shopby__list">
+                    {% for occasion in shop_by.occasions %}
+                    <li><a href="{% url 'catalog:plp' %}?occasion={{ occasion.pk }}">{{ occasion.name }}</a></li>
+                    {% endfor %}
+                  </ul>
+                </div>
+                {% endif %}
+                {% if shop_by.grades %}
+                <div class="siri-shopby__col">
+                  <p class="siri-shopby__heading">{% trans "Grade" %}</p>
+                  <ul class="siri-shopby__list">
+                    {% for grade in shop_by.grades %}
+                    <li><a href="{% url 'catalog:plp' %}?grade={{ grade.pk }}">{{ grade.name }}</a></li>
+                    {% endfor %}
+                  </ul>
+                </div>
+                {% endif %}
+              </div>
             </li>
             <li><a class="siri-nav__link {% if request.resolver_match.url_name == 'about-us' %}is-active{% endif %}"
                 href="{% url 'core:about-us' %}">{% trans "About" %}</a></li>
@@ -148,17 +201,30 @@
     </div>
   </div>
 
-  <div class="collapse d-lg-none" id="jmMainNav">
-    <div class="jm-mobile-nav container">
-      <a class="{% if request.resolver_match.url_name == 'homepage' %}is-active{% endif %}"
-        href="{% url 'cms:homepage' %}">{% trans "Home" %}</a>
-      <a class="{% if request.resolver_match.url_name == 'plp' %}is-active{% endif %}" href="{% url 'catalog:plp' %}">{% trans "Shop" %}</a>
-      <a class="{% if request.resolver_match.url_name == 'plp-category' %}is-active{% endif %}"
-        href="{% url 'catalog:plp' %}">{% trans "Collections" %}</a>
-      <a class="{% if request.resolver_match.url_name == 'about-us' %}is-active{% endif %}"
-        href="{% url 'core:about-us' %}">{% trans "About" %}</a>
-      <a class="{% if request.resolver_match.url_name == 'contact-us' %}is-active{% endif %}"
-        href="{% url 'core:contact-us' %}">{% trans "Contact" %}</a>
+  <div class="offcanvas offcanvas-start d-lg-none" tabindex="-1" id="jmMainNav" aria-labelledby="jmMainNavLabel">
+    <div class="offcanvas-header border-bottom">
+      <h5 class="offcanvas-title fw-bold" id="jmMainNavLabel">{% trans "Menu" %}</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="{% trans 'Close' %}"></button>
+    </div>
+    <div class="offcanvas-body p-0" style="overflow-y: auto;">
+      <div class="list-group list-group-flush border-bottom">
+        <a href="{% url 'cms:homepage' %}"
+          class="list-group-item list-group-item-action d-block py-2 px-4 border-0 {% if request.resolver_match.url_name == 'homepage' %}fw-bold text-floward{% endif %}">{% trans "Home" %}</a>
+        <a href="{% url 'catalog:plp' %}"
+          class="list-group-item list-group-item-action d-block py-2 px-4 border-0 {% if request.resolver_match.url_name == 'plp' %}fw-bold text-floward{% endif %}">{% trans "Shop" %}</a>
+      </div>
+      <div class="list-group list-group-flush border-bottom">
+        <a href="{% url 'catalog:plp' %}?featured=1" class="list-group-item list-group-item-action d-block py-2 px-4 border-0">{{ site_settings.featured_label }}</a>
+        <a href="{% url 'catalog:plp' %}?bestseller=1" class="list-group-item list-group-item-action d-block py-2 px-4 border-0">{{ site_settings.bestseller_label }}</a>
+        <a href="{% url 'catalog:plp' %}?new_arrival=1" class="list-group-item list-group-item-action d-block py-2 px-4 border-0">{{ site_settings.new_arrival_label }}</a>
+      </div>
+      {% include "includes/_taxonomy_accordion.html" with id_prefix="hamburgerShopBy" %}
+      <div class="list-group list-group-flush border-top">
+        <a href="{% url 'core:about-us' %}"
+          class="list-group-item list-group-item-action d-block py-2 px-4 border-0 {% if request.resolver_match.url_name == 'about-us' %}fw-bold text-floward{% endif %}">{% trans "About" %}</a>
+        <a href="{% url 'core:contact-us' %}"
+          class="list-group-item list-group-item-action d-block py-2 px-4 border-0 {% if request.resolver_match.url_name == 'contact-us' %}fw-bold text-floward{% endif %}">{% trans "Contact" %}</a>
+      </div>
     </div>
   </div>
 </header>

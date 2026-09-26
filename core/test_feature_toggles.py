@@ -55,7 +55,7 @@ class DeliveryOffRenderTests(TestCase):
     """Render customer and admin order pages with Delivery Integration ON and OFF."""
 
     def setUp(self):
-        from catalog.models import Category, Product
+        from catalog.models import Product
         from core.models import Currency
         from delhivery.models import DelhiveryShipment
         from orders.models import Order, OrderItem, OrderStatus
@@ -67,9 +67,8 @@ class DeliveryOffRenderTests(TestCase):
         self.profile = register_customer_email(
             email="render@example.com", password="testpass12345", name="Render"
         )
-        category = Category.objects.create(name="Cat", slug="cat")
         product = Product.objects.create(
-            name="Saree", slug="saree", sku="SKU-R1", category=category,
+            name="Saree", slug="saree", sku="SKU-R1",
             base_price="500.00", mrp="500.00", purchase_price="300.00", stock_quantity=5,
         )
         self.order = Order.objects.create(

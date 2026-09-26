@@ -43,11 +43,11 @@ class Coupon(TimeStampedModel):
     )
     valid_from = models.DateTimeField(null=True, blank=True, db_index=True)
     valid_until = models.DateTimeField(null=True, blank=True, db_index=True)
-    applicable_categories = models.ManyToManyField(
-        "catalog.Category",
+    applicable_collections = models.ManyToManyField(
+        "catalog.Collection",
         blank=True,
         related_name="coupons",
-        verbose_name="Applicable categories",
+        verbose_name="Applicable collections",
     )
     is_active = models.BooleanField(default=True, db_index=True)
 

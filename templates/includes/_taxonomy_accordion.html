@@ -1,0 +1,74 @@
+{# Requires id_prefix (unique per instance on the page) and shop_by in context. #}
+{% load i18n %}
+<div class="accordion accordion-flush" id="{{ id_prefix }}Accordion">
+  {% if shop_by.styles %}
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#{{ id_prefix }}Style">{% trans "Style" %}</button>
+    </h2>
+    <div id="{{ id_prefix }}Style" class="accordion-collapse collapse" data-bs-parent="#{{ id_prefix }}Accordion">
+      <div class="accordion-body p-0">
+        {% for style in shop_by.styles %}
+        <a href="{% url 'catalog:plp' %}?style={{ style.pk }}" class="list-group-item list-group-item-action d-block py-2 px-4 border-0">{{ style.name }}</a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% if shop_by.fabrics %}
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#{{ id_prefix }}Fabric">{% trans "Fabric" %}</button>
+    </h2>
+    <div id="{{ id_prefix }}Fabric" class="accordion-collapse collapse" data-bs-parent="#{{ id_prefix }}Accordion">
+      <div class="accordion-body p-0">
+        {% for fabric in shop_by.fabrics %}
+        <a href="{% url 'catalog:plp' %}?fabric={{ fabric.pk }}" class="list-group-item list-group-item-action d-block py-2 px-4 border-0">{{ fabric.name }}</a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% if shop_by.collections %}
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#{{ id_prefix }}Collection">{% trans "Collections" %}</button>
+    </h2>
+    <div id="{{ id_prefix }}Collection" class="accordion-collapse collapse" data-bs-parent="#{{ id_prefix }}Accordion">
+      <div class="accordion-body p-0">
+        {% for collection in shop_by.collections %}
+        <a href="{% url 'catalog:plp-collection' collection_slug=collection.slug %}" class="list-group-item list-group-item-action d-block py-2 px-4 border-0">{{ collection.name }}</a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% if shop_by.occasions %}
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#{{ id_prefix }}Occasion">{% trans "Occasion" %}</button>
+    </h2>
+    <div id="{{ id_prefix }}Occasion" class="accordion-collapse collapse" data-bs-parent="#{{ id_prefix }}Accordion">
+      <div class="accordion-body p-0">
+        {% for occasion in shop_by.occasions %}
+        <a href="{% url 'catalog:plp' %}?occasion={{ occasion.pk }}" class="list-group-item list-group-item-action d-block py-2 px-4 border-0">{{ occasion.name }}</a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% if shop_by.grades %}
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#{{ id_prefix }}Grade">{% trans "Grade" %}</button>
+    </h2>
+    <div id="{{ id_prefix }}Grade" class="accordion-collapse collapse" data-bs-parent="#{{ id_prefix }}Accordion">
+      <div class="accordion-body p-0">
+        {% for grade in shop_by.grades %}
+        <a href="{% url 'catalog:plp' %}?grade={{ grade.pk }}" class="list-group-item list-group-item-action d-block py-2 px-4 border-0">{{ grade.name }}</a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>

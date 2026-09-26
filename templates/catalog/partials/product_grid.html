@@ -6,9 +6,13 @@
   </div>
   {% empty %}
   <div class="col-12 text-center py-5">
+    {% if search_query %}
+    <p class="text-muted mb-3">{% blocktrans with term=search_query %}No products found for "{{ term }}".{% endblocktrans %} {% trans "Try a different search or browse all products." %}</p>
+    <a href="{% url 'catalog:plp' %}" class="btn btn-outline-floward btn-sm">{% trans "Browse All Products" %}</a>
+    {% else %}
     <p class="text-muted mb-3">{% trans "No products match your filters." %}</p>
-    <a href="{{ request.path }}"
-       class="btn btn-outline-floward btn-sm">{% trans "Clear filters" %}</a>
+    <a href="{{ request.path }}" class="btn btn-outline-floward btn-sm">{% trans "Clear Filters" %}</a>
+    {% endif %}
   </div>
   {% endfor %}
 </div>
@@ -36,7 +40,7 @@
 </nav>
 {% endif %}
 
-<h1 id="jm-page-title" class="section-title jm-page-title mb-0" hx-swap-oob="true">{% if active_category %}{{ active_category.name }}{% else %}{% trans "Shop All" %}{% endif %}</h1>
+<h1 id="jm-page-title" class="section-title jm-page-title mb-0" hx-swap-oob="true">{% if search_query %}{% blocktrans with term=search_query %}Search results for "{{ term }}"{% endblocktrans %}{% elif active_collection %}{{ active_collection.name }}{% else %}{% trans "Shop All" %}{% endif %}</h1>
 <p id="jm-plp-count" class="section-subtitle jm-plp-count" hx-swap-oob="true">
   {{ plp.total_count|default:"0" }} {% trans "products" %}
 </p>

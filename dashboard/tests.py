@@ -12,7 +12,7 @@ from django.urls import reverse
 
 from accounts.services import register_customer_email
 from cart.models import Cart, CartItem
-from catalog.models import Category, Product
+from catalog.models import Product
 from checkout.services import create_checkout_session, place_order
 from core.models import Currency
 from dashboard.forms import ProductVariantForm, ProductVariantFormSet
@@ -38,12 +38,10 @@ class OrderListTabsTests(TestCase):
         self.profile = register_customer_email(
             email="dash-order-test@example.com", password="testpass12345", name="Dash Order Test"
         )
-        category = Category.objects.create(name="Test Category", slug="dash-test-category")
         self.product = Product.objects.create(
             name="Test Yarn",
             slug="dash-test-yarn",
             sku="SKU-DASH-1",
-            category=category,
             base_price="500.00",
             mrp="500.00",
             purchase_price="300.00",
@@ -205,12 +203,10 @@ class ProductVariantFormSetValidationTests(TestCase):
     """Cross-row validation added to ProductVariantInlineFormSet."""
 
     def setUp(self) -> None:
-        category = Category.objects.create(name="Formset Category", slug="formset-category")
         self.product = Product.objects.create(
             name="Formset Yarn",
             slug="formset-yarn",
             sku="SKU-FORMSET-1",
-            category=category,
             base_price="100.00",
             mrp="100.00",
             purchase_price="60.00",
@@ -275,13 +271,11 @@ class ProductFormRequiredPriceGateTests(TestCase):
             username="dash-admin-price", email="dash-admin-price@example.com", password="testpass12345"
         )
         self.client.force_login(self.staff_user)
-        self.category = Category.objects.create(name="Price Category", slug="price-category")
 
     def _base_post(self, **overrides) -> dict:
         data = {
             "name": "Priced Yarn",
             "sku": "SKU-PRICE-1",
-            "category": str(self.category.pk),
             "variants-TOTAL_FORMS": "0",
             "variants-INITIAL_FORMS": "0",
             "variants-MIN_NUM_FORMS": "0",

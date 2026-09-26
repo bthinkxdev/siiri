@@ -13,7 +13,7 @@ from cart.selectors import (
     get_wishlist_count,
     get_wishlist_product_ids,
 )
-from catalog.selectors import get_category_tree
+from catalog.selectors import get_shop_by_facets
 from core.selectors import get_currency_by_code, get_default_currency
 from core.services import get_site_settings
 
@@ -31,7 +31,7 @@ def storefront(request: HttpRequest) -> dict[str, Any]:
 
     return {
         "site_settings": get_site_settings(),
-        "category_tree": get_category_tree(),
+        "shop_by": get_shop_by_facets(),
         "cart_count": get_cart_count(request=request),
         "cart_product_ids": get_cart_product_ids(request=request),
         "cart_item_keys": get_cart_item_keys(request=request),

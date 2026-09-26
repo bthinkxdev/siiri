@@ -5,11 +5,15 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import logging
 import uuid
 from decimal import Decimal
 from typing import Any
 
 from payments.adapters.base import PaymentCaptureResult, PaymentGatewayAdapter, PaymentIntentResult
+from payments.exceptions import PaymentGatewayError
+
+logger = logging.getLogger(__name__)
 
 
 class CardGatewayAdapter(PaymentGatewayAdapter):
@@ -217,42 +221,64 @@ class RazorpayAdapter(PaymentGatewayAdapter):
         currency: str,
         metadata: dict[str, Any],
     ) -> PaymentIntentResult:
+        """
+        Create a Razorpay order to back this payment.
+
+        Raises PaymentGatewayError when Razorpay is configured but the
+        request fails or is rejected — the caller must not treat that as a
+        normal pending payment (see the fabricated-intent-id bug this
+        replaced: a network failure used to silently return a fake intent id
+        as if it were real, leaving the customer on a payment widget that
+        could never actually charge them, with nothing logged).
+
+        Falls back to a mock intent only when no credentials are configured
+        at all (local/dev without a Razorpay account) — that is a deliberate
+        sandbox mode, not a failure.
+        """
         key_id, key_secret = _get_razorpay_credentials()
         amount_in_paise = int(amount * 100)
 
-        if key_id and key_secret:
-            try:
-                import requests
-                response = requests.post(
-                    "https://api.razorpay.com/v1/orders",
-                    auth=(key_id, key_secret),
-                    json={
-                        "amount": amount_in_paise,
-                        "currency": currency,
-                        "receipt": f"ord_{metadata.get('order_id', '')}",
-                        "notes": {
-                            "order_id": str(metadata.get("order_id", "")),
-                            "order_number": str(metadata.get("order_number", "")),
-                        },
-                    },
-                    timeout=10,
-                )
-                if response.status_code in (200, 201):
-                    data = response.json()
-                    intent_id = data.get("id")
-                    return PaymentIntentResult(
-                        intent_id=intent_id,
-                        requires_webhook=True,
-                        metadata={"key_id": key_id, "razorpay_order_id": intent_id, **metadata},
-                    )
-            except Exception:
-                pass
+        if not (key_id and key_secret):
+            intent_id = f"rzp_order_{uuid.uuid4().hex[:16]}"
+            return PaymentIntentResult(
+                intent_id=intent_id,
+                requires_webhook=True,
+                metadata={"key_id": "rzp_test_mock", "razorpay_order_id": intent_id, **metadata},
+            )
 
-        intent_id = f"rzp_order_{uuid.uuid4().hex[:16]}"
+        import requests
+        try:
+            response = requests.post(
+                "https://api.razorpay.com/v1/orders",
+                auth=(key_id, key_secret),
+                json={
+                    "amount": amount_in_paise,
+                    "currency": currency,
+                    "receipt": f"ord_{metadata.get('order_id', '')}",
+                    "notes": {
+                        "order_id": str(metadata.get("order_id", "")),
+                        "order_number": str(metadata.get("order_number", "")),
+                    },
+                },
+                timeout=10,
+            )
+        except requests.RequestException as exc:
+            logger.error("Razorpay order-creation request failed: order_id=%s error=%s", metadata.get("order_id"), exc)
+            raise PaymentGatewayError("Unable to reach the payment gateway. Please try again.") from exc
+
+        if response.status_code not in (200, 201):
+            logger.error(
+                "Razorpay order-creation rejected: order_id=%s status=%s body=%s",
+                metadata.get("order_id"), response.status_code, response.text[:500],
+            )
+            raise PaymentGatewayError("The payment gateway rejected the order. Please try again.")
+
+        data = response.json()
+        intent_id = data.get("id")
         return PaymentIntentResult(
             intent_id=intent_id,
             requires_webhook=True,
-            metadata={"key_id": key_id or "rzp_test_mock", "razorpay_order_id": intent_id, **metadata},
+            metadata={"key_id": key_id, "razorpay_order_id": intent_id, **metadata},
         )
 
     def verify_payment_signature(
@@ -264,7 +290,7 @@ class RazorpayAdapter(PaymentGatewayAdapter):
     ) -> bool:
         key_id, key_secret = _get_razorpay_credentials()
         if not key_secret:
-            return True
+            return False
         msg = f"{razorpay_order_id}|{razorpay_payment_id}".encode("utf-8")
         expected = hmac.new(key_secret.encode("utf-8"), msg, hashlib.sha256).hexdigest()
         return hmac.compare_digest(expected, razorpay_signature)
@@ -305,8 +331,8 @@ class RazorpayAdapter(PaymentGatewayAdapter):
             default_curr = get_default_currency()
             currency = default_curr.code if default_curr else "AED"
         key_id, key_secret = _get_razorpay_credentials()
-        if not (key_id and key_secret and razorpay_payment_id) or razorpay_payment_id.startswith("pay_test_"):
-            return True
+        if not (key_id and key_secret and razorpay_payment_id):
+            return False
 
         import requests
         try:

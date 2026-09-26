@@ -78,17 +78,17 @@ def build_hreflang_urls(*, request: HttpRequest) -> list[dict[str, str]]:
 def build_plp_canonical_url(
     *,
     request: HttpRequest,
-    category_slug: str | None = None,
+    collection_slug: str | None = None,
 ) -> str:
     """
-    Canonical URL for PLP — filtered query params canonicalize to category or shop root.
+    Canonical URL for PLP — filtered query params canonicalize to collection or shop root.
 
     Prevents duplicate-content penalties from sort/filter query strings.
     """
     from django.urls import reverse
 
-    if category_slug:
-        path = reverse("catalog:plp-category", kwargs={"category_slug": category_slug})
+    if collection_slug:
+        path = reverse("catalog:plp-collection", kwargs={"collection_slug": collection_slug})
     else:
         path = reverse("catalog:plp")
     return request.build_absolute_uri(path)

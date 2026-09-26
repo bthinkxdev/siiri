@@ -64,11 +64,43 @@ urlpatterns = [
 ]
 
 urlpatterns += _crud(
-    "category",
-    catalog.CategoryListView,
-    catalog.CategoryCreateView,
-    catalog.CategoryUpdateView,
-    catalog.CategoryDeleteView,
+    "collection",
+    catalog.CollectionListView,
+    catalog.CollectionCreateView,
+    catalog.CollectionUpdateView,
+    catalog.CollectionDeleteView,
+)
+
+urlpatterns += _crud(
+    "style",
+    catalog.StyleListView,
+    catalog.StyleCreateView,
+    catalog.StyleUpdateView,
+    catalog.StyleDeleteView,
+)
+
+urlpatterns += _crud(
+    "fabric",
+    catalog.FabricListView,
+    catalog.FabricCreateView,
+    catalog.FabricUpdateView,
+    catalog.FabricDeleteView,
+)
+
+urlpatterns += _crud(
+    "occasion",
+    catalog.OccasionListView,
+    catalog.OccasionCreateView,
+    catalog.OccasionUpdateView,
+    catalog.OccasionDeleteView,
+)
+
+urlpatterns += _crud(
+    "grade",
+    catalog.GradeListView,
+    catalog.GradeCreateView,
+    catalog.GradeUpdateView,
+    catalog.GradeDeleteView,
 )
 
 urlpatterns += _crud(

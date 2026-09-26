@@ -33,7 +33,7 @@ class HomepageSectionType(models.TextChoices):
     """Every homepage block type; add one enum value + one partial to extend."""
 
     HERO_SLIDER = "hero_slider", "Hero Slider"
-    SHOP_BY_CATEGORY = "shop_by_category", "Shop by Category"
+    SHOP_BY_COLLECTION = "shop_by_collection", "Shop by Collection"
     FEATURED_PRODUCTS = "featured_products", "Featured Products"
     NEW_ARRIVALS = "new_arrivals", "New Arrivals"
     BEST_SELLERS = "best_sellers", "Best Sellers"
@@ -43,7 +43,7 @@ class HomepageSectionType(models.TextChoices):
     REVIEWS = "reviews", "Reviews"
     INSTAGRAM_GALLERY = "instagram_gallery", "Instagram Gallery"
     NEWSLETTER = "newsletter", "Newsletter"
-    CATEGORY_PRODUCTS = "category_products", "Category Product Grids"
+    COLLECTION_PRODUCTS = "collection_products", "Collection Product Grids"
     PROMO_BANNERS = "promo_banners", "Promo Banners"
     SERVICE_STRIP = "service_strip", "Service Strip"
     WIDE_BANNER = "wide_banner", "Wide Banner"

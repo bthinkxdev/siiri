@@ -6,7 +6,7 @@ from django.db.models import ProtectedError
 from django.test import TestCase
 
 from accounts.services import register_customer_email
-from catalog.models import Category, Product, ProductVariant
+from catalog.models import Product, ProductVariant
 from core.models import Currency
 from orders.models import Order, OrderItem, OrderStatus
 
@@ -17,12 +17,10 @@ class ProductDisplayVariantTests(TestCase):
     price/stock sync — both must agree on which variant is authoritative."""
 
     def setUp(self) -> None:
-        category = Category.objects.create(name="Variant Category", slug="variant-category")
         self.product = Product.objects.create(
             name="Variant Yarn",
             slug="variant-yarn",
             sku="SKU-VARIANT-1",
-            category=category,
             base_price="100.00",
             mrp="100.00",
             purchase_price="60.00",
@@ -61,12 +59,10 @@ class ProductVariantDeleteProtectionTests(TestCase):
     data can't silently go missing."""
 
     def setUp(self) -> None:
-        category = Category.objects.create(name="Protect Category", slug="protect-category")
         self.product = Product.objects.create(
             name="Protect Yarn",
             slug="protect-yarn",
             sku="SKU-PROTECT-1",
-            category=category,
             base_price="100.00",
             mrp="100.00",
             purchase_price="60.00",

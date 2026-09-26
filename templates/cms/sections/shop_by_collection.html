@@ -1,0 +1,20 @@
+{% load i18n static %}
+{% if section_context.collections %}
+<section class="hm-circles" id="jm-collections" aria-label="{% trans 'Shop by collection' %}">
+  <div class="hm-wrap">
+    <ul class="hm-circles__row" role="list">
+      {% for collection in section_context.collections %}
+      <li class="hm-circles__slot">
+        <a href="{% url 'catalog:plp-collection' collection_slug=collection.slug %}" class="hm-circle">
+          <span class="hm-circle__photo">
+            <img src="{% if collection.og_image %}{{ collection.og_image.url }}{% else %}{% static 'img/product-placeholder.svg' %}{% endif %}"
+                 alt="" width="120" height="120" loading="lazy" decoding="async">
+          </span>
+          <span class="hm-circle__label">{{ collection.name }}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+{% endif %}

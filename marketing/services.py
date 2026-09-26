@@ -23,12 +23,12 @@ def validate_coupon_for_cart(
     code: str,
     cart_subtotal: Decimal,
     customer_profile_id: Optional[int] = None,
-    cart_category_ids: Optional[list[int]] = None,
+    cart_collection_ids: Optional[list[int]] = None,
 ) -> dict[str, Decimal | str]:
     """
     Validate a coupon and return the discount amount for a cart subtotal.
 
-    Enforces date windows, usage limits, min order value, and category scope.
+    Enforces date windows, usage limits, min order value, and collection scope.
     """
     now = timezone.now()
     coupon = (
@@ -60,9 +60,9 @@ def validate_coupon_for_cart(
                 "You have already used this coupon the maximum number of times."
             )
 
-    if cart_category_ids is not None and coupon.applicable_categories.exists():
-        allowed = set(coupon.applicable_categories.values_list("pk", flat=True))
-        if not allowed.intersection(cart_category_ids):
+    if cart_collection_ids is not None and coupon.applicable_collections.exists():
+        allowed = set(coupon.applicable_collections.values_list("pk", flat=True))
+        if not allowed.intersection(cart_collection_ids):
             raise InvalidCouponError("Coupon does not apply to items in your cart.")
 
     discount_type = coupon.discount_type

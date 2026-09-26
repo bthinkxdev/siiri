@@ -1,9 +1,10 @@
 {% load i18n static %}
-{% if products or brands or categories or equipment_types %}
+{% if products or brands or collections %}
 <div class="search-suggestions-container" role="presentation">
-  
+
   {# products #}
   {% if products %}
+  <div class="search-suggestions-section">
     <ul class="list-unstyled mb-0" role="presentation">
       {% for product in products %}
       <li role="presentation">
@@ -29,6 +30,43 @@
               <span class="text-muted d-block text-truncate" style="font-size: 0.75rem; margin-top: 1px;">{{ product.brand.name }}</span>
             {% endif %}
           </div>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% if total_count > products|length %}
+    <a href="{% url 'catalog:plp' %}?q={{ query|urlencode }}"
+       class="search-suggestion-link d-block px-3 py-2 text-center fw-medium text-floward text-decoration-none"
+       style="font-size: 0.8125rem;">
+      {% blocktrans with count=total_count %}View all {{ count }} results{% endblocktrans %}
+    </a>
+    {% elif products %}
+    <a href="{% url 'catalog:plp' %}?q={{ query|urlencode }}"
+       class="search-suggestion-link d-block px-3 py-2 text-center fw-medium text-floward text-decoration-none"
+       style="font-size: 0.8125rem;">
+      {% trans "View all results" %}
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# collections #}
+  {% if collections %}
+  <div class="search-suggestions-section mt-2">
+    <ul class="list-unstyled mb-0" role="presentation">
+      {% for collection in collections %}
+      <li role="presentation">
+        <a href="{% url 'catalog:plp-collection' collection_slug=collection.slug %}"
+           class="search-suggestion-link d-flex align-items-center px-3 py-2 rounded text-dark text-decoration-none transition-all"
+           role="option"
+           id="search-suggestion-collection-{{ forloop.counter }}"
+           style="gap: 12px; font-size: 0.875rem;">
+          <div class="rounded bg-light d-flex align-items-center justify-content-center text-muted" style="width: 30px; height: 30px; flex-shrink: 0; border: 1px solid var(--floward-border-light);">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+            </svg>
+          </div>
+          <span class="fw-medium text-dark text-truncate">{{ collection.name }}</span>
         </a>
       </li>
       {% endfor %}
@@ -64,8 +102,6 @@
   </div>
   {% endif %}
 
-
-
 </div>
 {% elif query %}
 <div class="search-suggestions-empty" role="status">
@@ -78,10 +114,10 @@
     {% blocktrans with term=query %}No results for "{{ term }}"{% endblocktrans %}
   </p>
   <p class="search-suggestions-empty__hint small text-muted mb-3">
-    {% trans "Try a different keyword or browse our collections." %}
+    {% trans "Try a different keyword or browse all products." %}
   </p>
   <a href="{% url 'catalog:plp' %}" class="btn btn-outline-floward btn-sm">
-    {% trans "Browse all categories" %}
+    {% trans "Browse All Products" %}
   </a>
 </div>
 {% endif %}

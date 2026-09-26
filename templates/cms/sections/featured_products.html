@@ -1,4 +1,3 @@
 {% load i18n %}
-{% trans "Featured Products" as default_title %}
 {% url 'catalog:plp' as plp_url %}
-{% include "cms/sections/_product_rail_section.html" with title=section_context.title|default:default_title view_all=plp_url|add:"?featured=1" products=section_context.products badge="featured" %}
+{% include "cms/sections/_product_rail_section.html" with title=section_context.title|default:site_settings.featured_label view_all=plp_url|add:"?featured=1" products=section_context.products badge="featured" %}

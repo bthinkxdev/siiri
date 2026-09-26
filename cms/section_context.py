@@ -5,11 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 from catalog.selectors import (
+    get_active_collections,
     get_featured_brands,
     get_homepage_product_rails,
     get_products_for_section_config,
     get_recent_approved_reviews,
-    get_root_categories,
 )
 from cms.selectors import (
     get_home_video,
@@ -46,7 +46,7 @@ def build_section_context(
         "hero_slider": _hero_slider,
         "shop_by_occasion": _empty,
         "shop_by_recipient": _empty,
-        "shop_by_category": _shop_by_category,
+        "shop_by_collection": _shop_by_collection,
         "featured_products": _featured,
         "new_arrivals": _new_arrivals,
         "best_sellers": _best_sellers,
@@ -57,7 +57,7 @@ def build_section_context(
         "reviews": _reviews,
         "instagram_gallery": _instagram,
         "newsletter": _newsletter,
-        "category_products": _category_products,
+        "collection_products": _collection_products,
         "promo_banners": _promo_banners,
         "testimonials": _testimonials,
         "video_section": _video_section,
@@ -82,21 +82,21 @@ def _rails(product_rails: dict[str, list] | None, key: str) -> list:
     return get_homepage_product_rails().get(key, [])
 
 
-def _category_products(config: dict[str, Any]) -> dict[str, Any]:
-    from catalog.models import Category
-    from catalog.selectors import get_products_by_category_slug
-    
-    slug_val = config.get("category_slug", "all")
+def _collection_products(config: dict[str, Any]) -> dict[str, Any]:
+    from catalog.models import Collection
+    from catalog.selectors import get_products_by_collection_slug
+
+    slug_val = config.get("collection_slug", "all")
     sections = []
-    
+
     if slug_val == "all":
-        roots = Category.objects.filter(
-            is_active=True, show_on_homepage=True, parent__isnull=True
+        collections = Collection.objects.filter(
+            is_active=True, show_on_homepage=True
         ).order_by("display_order")
-        for cat in roots:
-            prods = get_products_by_category_slug(cat.slug, limit=100) # fetch effectively all products
+        for collection in collections:
+            prods = get_products_by_collection_slug(collection.slug, limit=100) # fetch effectively all products
             if prods:
-                sections.append({"category": cat, "products": prods})
+                sections.append({"collection": collection, "products": prods})
     else:
         if isinstance(slug_val, str):
             slugs = [s.strip() for s in slug_val.split(",") if s.strip()]
@@ -104,13 +104,13 @@ def _category_products(config: dict[str, Any]) -> dict[str, Any]:
             slugs = slug_val
 
         for s in slugs:
-            cat = Category.objects.filter(slug=s, is_active=True).first()
-            if cat:
-                prods = get_products_by_category_slug(s, limit=100)
+            collection = Collection.objects.filter(slug=s, is_active=True).first()
+            if collection:
+                prods = get_products_by_collection_slug(s, limit=100)
                 if prods:
-                    sections.append({"category": cat, "products": prods})
-                
-    return {"category_sections": sections}
+                    sections.append({"collection": collection, "products": prods})
+
+    return {"collection_sections": sections}
 
 
 def _promo_banners(config: dict[str, Any]) -> dict[str, Any]:
@@ -166,8 +166,8 @@ def _shop_by_recipient(config: dict[str, Any]) -> dict[str, Any]:
     return {}
 
 
-def _shop_by_category(config: dict[str, Any]) -> dict[str, Any]:
-    return {"categories": get_root_categories(category_ids=None)}
+def _shop_by_collection(config: dict[str, Any]) -> dict[str, Any]:
+    return {"collections": get_active_collections()}
 
 
 def _featured(

@@ -10,43 +10,34 @@ from django.db import models
 from core.models import TimeStampedModel
 
 
-class Category(TimeStampedModel):
-    """Hierarchical product category tree."""
+class Collection(TimeStampedModel):
+    """Merchandising collection — a product may belong to several (Shopify-style)."""
 
     name = models.CharField(
         max_length=120,
         verbose_name="Name",
-        help_text="Display name of the category.",
+        help_text="Display name of the collection.",
     )
     slug = models.SlugField(
         max_length=120,
         unique=True,
         db_index=True,
         verbose_name="Slug",
-        help_text="URL-friendly category identifier.",
+        help_text="URL-friendly collection identifier.",
     )
     tagline = models.CharField(
         max_length=80,
         blank=True,
         verbose_name="Tagline",
-        help_text="Optional short italic line shown under the category title on its listing page.",
+        help_text="Optional short italic line shown under the collection title on its listing page.",
     )
     meta_title = models.CharField(max_length=70, blank=True, verbose_name="Meta title")
     meta_description = models.CharField(max_length=160, blank=True, verbose_name="Meta description")
     og_image = models.ImageField(
-        upload_to="seo/categories/",
+        upload_to="seo/collections/",
         blank=True,
         null=True,
         verbose_name="Open Graph image",
-    )
-    parent = models.ForeignKey(
-        "self",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="children",
-        verbose_name="Parent category",
-        help_text="Parent node in the category tree; null for top-level.",
     )
     display_order = models.PositiveIntegerField(
         default=0,
@@ -57,26 +48,105 @@ class Category(TimeStampedModel):
         default=True,
         db_index=True,
         verbose_name="Is active",
-        help_text="When False, category is hidden from the storefront.",
+        help_text="When False, collection is hidden from the storefront.",
     )
     show_on_homepage = models.BooleanField(
         default=True,
         db_index=True,
         verbose_name="Show on homepage",
-        help_text="When on, this category's products appear in the homepage category-rails section.",
+        help_text="When on, this collection's products appear in the homepage collection-rails section.",
     )
 
     class Meta:
-        verbose_name = "Category"
-        verbose_name_plural = "Categories"
+        verbose_name = "Collection"
+        verbose_name_plural = "Collections"
         ordering = ["display_order", "name"]
         indexes = [
-            models.Index(fields=["is_active"], name="cat_category_is_active_idx"),
+            models.Index(fields=["is_active"], name="cat_collection_is_active_idx"),
         ]
 
     def __str__(self) -> str:
         return self.name
 
+
+class Style(TimeStampedModel):
+    """Product style facet (e.g. Traditional, Contemporary) — many-to-many with Product."""
+
+    name = models.CharField(max_length=120, verbose_name="Name")
+    slug = models.SlugField(max_length=120, unique=True, db_index=True, verbose_name="Slug")
+    display_order = models.PositiveIntegerField(default=0, verbose_name="Display order")
+    is_active = models.BooleanField(default=True, db_index=True, verbose_name="Is active")
+
+    class Meta:
+        verbose_name = "Style"
+        verbose_name_plural = "Styles"
+        ordering = ["display_order", "name"]
+        indexes = [
+            models.Index(fields=["is_active"], name="cat_style_is_active_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Fabric(TimeStampedModel):
+    """Product fabric facet (e.g. Silk, Cotton) — many-to-many with Product."""
+
+    name = models.CharField(max_length=120, verbose_name="Name")
+    slug = models.SlugField(max_length=120, unique=True, db_index=True, verbose_name="Slug")
+    display_order = models.PositiveIntegerField(default=0, verbose_name="Display order")
+    is_active = models.BooleanField(default=True, db_index=True, verbose_name="Is active")
+
+    class Meta:
+        verbose_name = "Fabric"
+        verbose_name_plural = "Fabrics"
+        ordering = ["display_order", "name"]
+        indexes = [
+            models.Index(fields=["is_active"], name="cat_fabric_is_active_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Occasion(TimeStampedModel):
+    """Product occasion facet (e.g. Wedding, Festive) — many-to-many with Product."""
+
+    name = models.CharField(max_length=120, verbose_name="Name")
+    slug = models.SlugField(max_length=120, unique=True, db_index=True, verbose_name="Slug")
+    display_order = models.PositiveIntegerField(default=0, verbose_name="Display order")
+    is_active = models.BooleanField(default=True, db_index=True, verbose_name="Is active")
+
+    class Meta:
+        verbose_name = "Occasion"
+        verbose_name_plural = "Occasions"
+        ordering = ["display_order", "name"]
+        indexes = [
+            models.Index(fields=["is_active"], name="cat_occasion_is_active_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Grade(TimeStampedModel):
+    """Product grade facet (e.g. Premium, Standard) — many-to-many with Product."""
+
+    name = models.CharField(max_length=120, verbose_name="Name")
+    slug = models.SlugField(max_length=120, unique=True, db_index=True, verbose_name="Slug")
+    display_order = models.PositiveIntegerField(default=0, verbose_name="Display order")
+    is_active = models.BooleanField(default=True, db_index=True, verbose_name="Is active")
+
+    class Meta:
+        verbose_name = "Grade"
+        verbose_name_plural = "Grades"
+        ordering = ["display_order", "name"]
+        indexes = [
+            models.Index(fields=["is_active"], name="cat_grade_is_active_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return self.name
 
 
 class Brand(TimeStampedModel):
@@ -174,11 +244,35 @@ class Product(TimeStampedModel):
         verbose_name="HSN Code",
         help_text="Harmonized System of Nomenclature code.",
     )
-    category = models.ForeignKey(
-        Category,
-        on_delete=models.PROTECT,
+    collections = models.ManyToManyField(
+        Collection,
         related_name="products",
-        verbose_name="Category",
+        blank=True,
+        verbose_name="Collections",
+    )
+    styles = models.ManyToManyField(
+        Style,
+        related_name="products",
+        blank=True,
+        verbose_name="Styles",
+    )
+    fabrics = models.ManyToManyField(
+        Fabric,
+        related_name="products",
+        blank=True,
+        verbose_name="Fabrics",
+    )
+    occasions = models.ManyToManyField(
+        Occasion,
+        related_name="products",
+        blank=True,
+        verbose_name="Occasions",
+    )
+    grades = models.ManyToManyField(
+        Grade,
+        related_name="products",
+        blank=True,
+        verbose_name="Grades",
     )
     brand = models.ForeignKey(
         Brand,
@@ -271,10 +365,6 @@ class Product(TimeStampedModel):
         verbose_name = "Product"
         verbose_name_plural = "Products"
         indexes = [
-            models.Index(
-                fields=["is_active", "category_id"],
-                name="cat_prod_active_category_idx",
-            ),
             models.Index(
                 fields=["is_active", "is_bestseller"],
                 name="cat_prod_active_bestseller_idx",

@@ -86,7 +86,7 @@ def get_top_products(*, limit: int = 5) -> list[dict[str, Any]]:
 
     rows = list(
         OrderItem.objects.filter(order__order_status__in=REVENUE_ORDER_STATUSES)
-        .values("product_id", "product__name", "product__category__name", "product__category_id")
+        .values("product_id", "product__name")
         .annotate(
             total_units=Sum("quantity"),
             total_revenue=Sum(F("unit_price") * F("quantity"))
@@ -112,7 +112,6 @@ def get_top_products(*, limit: int = 5) -> list[dict[str, Any]]:
                 "name": r["product__name"],
                 "units": r["total_units"],
                 "revenue": r["total_revenue"],
-                "category": r["product__category__name"] if r["product__category_id"] else "",
                 "image": _primary_image_url(product) if product else None,
                 "share": round(100 * rev / top_revenue) if top_revenue else 0,
             }
@@ -124,7 +123,6 @@ def get_low_stock_products(*, limit: int = 5) -> list[dict[str, Any]]:
     """Active products at or below their low-stock threshold (but not completely out of stock)."""
     products = (
         Product.objects.filter(is_active=True, stock_quantity__lte=F("low_stock_threshold"), stock_quantity__gt=0)
-        .select_related("category")
         .prefetch_related("images")
         .order_by("stock_quantity")[:limit]
     )
@@ -133,7 +131,6 @@ def get_low_stock_products(*, limit: int = 5) -> list[dict[str, Any]]:
             "name": p.name,
             "sku": p.sku,
             "stock": p.stock_quantity,
-            "category": p.category.name if p.category_id else "",
             "image": _primary_image_url(p),
         }
         for p in products

@@ -183,12 +183,16 @@ def apply_coupon(*, cart: Cart, code: str) -> Cart:
         InvalidCouponError: Propagated from marketing.services.
     """
     summary = get_cart_summary(cart=cart)
-    category_ids = [line.product.category_id for line in summary.lines]
+    collection_ids = [
+        collection.pk
+        for line in summary.lines
+        for collection in line.product.collections.all()
+    ]
     result = validate_coupon_for_cart(
         code=code,
         cart_subtotal=summary.subtotal,
         customer_profile_id=cart.customer_profile_id,
-        cart_category_ids=category_ids,
+        cart_collection_ids=collection_ids,
     )
     cart.coupon_code = result["code"]
     cart.coupon_discount = result["discount_amount"]

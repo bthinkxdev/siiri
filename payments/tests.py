@@ -18,6 +18,8 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+
+import requests
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
@@ -26,18 +28,19 @@ from django.urls import reverse
 
 from accounts.services import register_customer_email
 from cart.models import Cart, CartItem
-from catalog.models import Category, Product
+from catalog.models import Product
 from checkout.services import create_checkout_session, place_order
 from core.models import Currency
 from orders.models import OrderStatus, OrderStatusHistory
 from payments.adapters.concrete import RazorpayAdapter
+from payments.exceptions import PaymentGatewayError
 from payments.models import (
     PaymentStatus,
     PaymentTransaction,
     RazorpayWebhookEvent,
     RazorpayWebhookEventStatus,
 )
-from payments.services import confirm_payment_success
+from payments.services import confirm_payment_success, recover_stale_razorpay_orders
 
 WEBHOOK_SECRET = "test-razorpay-webhook-secret"
 
@@ -87,12 +90,10 @@ class RazorpayWebhookTests(TestCase):
             password="testpass12345",
             name="Webhook Test",
         )
-        category = Category.objects.create(name="Test Category", slug="test-category")
         self.product = Product.objects.create(
             name="Test Yarn",
             slug="test-yarn",
             sku="SKU-TEST-1",
-            category=category,
             base_price="500.00",
             mrp="500.00",
             purchase_price="300.00",
@@ -528,6 +529,88 @@ def _response(status_code: int, json_data: dict | None = None) -> MagicMock:
     return resp
 
 
+class RecoverStaleRazorpayOrdersTests(TestCase):
+    """
+    The scheduled reconciliation job must verify the amount Razorpay actually
+    reports for a payment before confirming an order from it — even though
+    the query is already scoped server-side to this transaction's own
+    razorpay_order_id, a mismatched amount means something is wrong and must
+    never be silently trusted.
+    """
+
+    def setUp(self) -> None:
+        self.currency, _ = Currency.objects.get_or_create(
+            code="INR",
+            defaults={"symbol": "₹", "exchange_rate_to_base": "1.00000000", "is_default": True},
+        )
+        self.profile = register_customer_email(
+            email="stale-recovery@example.com", password="testpass12345", name="Stale Recovery"
+        )
+        self.product = Product.objects.create(
+            name="Test Yarn", slug="stale-recovery-yarn", sku="SKU-STALE-1",
+            base_price="500.00", mrp="500.00", purchase_price="300.00", stock_quantity=100,
+        )
+        cart = Cart.objects.create(customer_profile=self.profile, currency=self.currency)
+        CartItem.objects.create(
+            cart=cart, product=self.product, quantity=1, unit_price_at_add=self.product.base_price,
+        )
+        session = create_checkout_session(cart=cart, customer_profile=self.profile)
+        self.order = place_order(
+            checkout_session_id=session.pk,
+            idempotency_key="stale-recovery-order-1",
+            gateway_key="razorpay_upi",
+            customer_profile=self.profile,
+        )
+        self.tx = PaymentTransaction.objects.create(
+            order=self.order,
+            gateway_key="razorpay_upi",
+            amount=self.order.total_amount,
+            currency=self.order.currency,
+            status=PaymentStatus.PENDING,
+            external_intent_id="order_stale_1",
+        )
+        from django.utils import timezone
+        from datetime import timedelta
+        PaymentTransaction.objects.filter(pk=self.tx.pk).update(
+            created_at=timezone.now() - timedelta(minutes=30)
+        )
+
+        creds_patch = patch(
+            "payments.adapters.concrete._get_razorpay_credentials",
+            return_value=("test_key_id", "test_key_secret"),
+        )
+        creds_patch.start()
+        self.addCleanup(creds_patch.stop)
+
+    @patch("requests.get")
+    def test_amount_mismatch_is_not_recovered(self, mock_get):
+        correct_paise = int(self.order.total_amount * 100)
+        mock_get.return_value = _response(200, {
+            "items": [{"id": "pay_stale_wrong_amount", "status": "captured", "amount": correct_paise - 100}]
+        })
+
+        recovered = recover_stale_razorpay_orders(minutes=15)
+
+        self.assertEqual(recovered, [])
+        self.order.refresh_from_db()
+        self.tx.refresh_from_db()
+        self.assertEqual(self.order.order_status, OrderStatus.CHECKOUT_PENDING)
+        self.assertEqual(self.tx.status, PaymentStatus.PENDING)
+
+    @patch("requests.get")
+    def test_matching_amount_is_recovered(self, mock_get):
+        correct_paise = int(self.order.total_amount * 100)
+        mock_get.return_value = _response(200, {
+            "items": [{"id": "pay_stale_correct", "status": "captured", "amount": correct_paise}]
+        })
+
+        recovered = recover_stale_razorpay_orders(minutes=15)
+
+        self.assertEqual(len(recovered), 1)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.order_status, OrderStatus.CONFIRMED)
+
+
 class RazorpayCapturePaymentTests(TestCase):
     """
     Unit tests for RazorpayAdapter.capture_payment's disambiguation between a
@@ -586,3 +669,107 @@ class RazorpayCapturePaymentTests(TestCase):
             razorpay_payment_id="pay_live_network_error", amount=Decimal("500.00"), currency="INR"
         )
         self.assertFalse(result)
+
+    def test_missing_payment_id_fails_closed(self):
+        """
+        capture_payment must never return True on missing inputs — a payment
+        id is required to authoritatively confirm anything actually happened.
+        """
+        result = self.adapter.capture_payment(
+            razorpay_payment_id="", amount=Decimal("500.00"), currency="INR"
+        )
+        self.assertFalse(result)
+
+
+class RazorpayFailClosedCredentialsTests(TestCase):
+    """
+    Blank/unconfigured Razorpay credentials must never make verification or
+    capture pass — a cleared or not-yet-configured razorpay_key_secret (a
+    DB-editable Site Settings field) previously made every callback signature
+    check pass unconditionally, which is an unauthenticated order-confirmation
+    hole in any environment where that field is empty.
+    """
+
+    def setUp(self) -> None:
+        self.adapter = RazorpayAdapter()
+        creds_patch = patch(
+            "payments.adapters.concrete._get_razorpay_credentials",
+            return_value=("", ""),
+        )
+        creds_patch.start()
+        self.addCleanup(creds_patch.stop)
+
+    def test_signature_verification_fails_closed_without_credentials(self):
+        result = self.adapter.verify_payment_signature(
+            razorpay_order_id="order_x",
+            razorpay_payment_id="pay_x",
+            razorpay_signature="anything",
+        )
+        self.assertFalse(result)
+
+    def test_capture_fails_closed_without_credentials(self):
+        result = self.adapter.capture_payment(
+            razorpay_payment_id="pay_x", amount=Decimal("500.00"), currency="INR"
+        )
+        self.assertFalse(result)
+
+
+class RazorpayCreatePaymentIntentTests(TestCase):
+    """
+    A network failure or a rejected request while Razorpay IS configured must
+    raise PaymentGatewayError, never silently fabricate a fake intent id and
+    pretend the order was created (the old behavior left customers on a
+    payment widget that could never actually charge them, with no log entry
+    anywhere an operator could use to notice the outage).
+    """
+
+    def setUp(self) -> None:
+        self.adapter = RazorpayAdapter()
+        creds_patch = patch(
+            "payments.adapters.concrete._get_razorpay_credentials",
+            return_value=("test_key_id", "test_key_secret"),
+        )
+        creds_patch.start()
+        self.addCleanup(creds_patch.stop)
+
+    @patch("requests.post", side_effect=requests.exceptions.ConnectionError("simulated network failure"))
+    def test_network_exception_raises_gateway_error(self, mock_post):
+        with self.assertRaises(PaymentGatewayError):
+            self.adapter.create_payment_intent(
+                amount=Decimal("500.00"), currency="INR", metadata={"order_id": 1},
+            )
+
+    @patch("requests.post")
+    def test_non_2xx_response_raises_gateway_error(self, mock_post):
+        mock_post.return_value = _response(401, {"error": {"description": "Authentication failed"}})
+        with self.assertRaises(PaymentGatewayError):
+            self.adapter.create_payment_intent(
+                amount=Decimal("500.00"), currency="INR", metadata={"order_id": 1},
+            )
+
+    @patch("requests.post")
+    def test_successful_response_returns_real_intent_id(self, mock_post):
+        mock_post.return_value = _response(200, {"id": "order_real_123"})
+        result = self.adapter.create_payment_intent(
+            amount=Decimal("500.00"), currency="INR", metadata={"order_id": 1},
+        )
+        self.assertEqual(result.intent_id, "order_real_123")
+
+
+class RazorpayCreatePaymentIntentNoCredentialsTests(TestCase):
+    """No credentials configured is a deliberate sandbox mode, not a failure."""
+
+    def setUp(self) -> None:
+        self.adapter = RazorpayAdapter()
+        creds_patch = patch(
+            "payments.adapters.concrete._get_razorpay_credentials",
+            return_value=("", ""),
+        )
+        creds_patch.start()
+        self.addCleanup(creds_patch.stop)
+
+    def test_returns_mock_intent_without_raising(self):
+        result = self.adapter.create_payment_intent(
+            amount=Decimal("500.00"), currency="INR", metadata={"order_id": 1},
+        )
+        self.assertTrue(result.intent_id.startswith("rzp_order_"))

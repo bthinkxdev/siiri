@@ -19,6 +19,6 @@ urlpatterns = [
         name="variant-price",
     ),
 
-    path("category/<slug:category_slug>/", views.plp_view, name="plp-category"),
+    path("collection/<slug:collection_slug>/", views.plp_view, name="plp-collection"),
     path("", views.plp_view, name="plp"),
 ]

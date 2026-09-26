@@ -32,9 +32,33 @@
       </a>
     </li>
     <li>
-      <a class="nav-link {% if nav_section == 'categories' %}active{% endif %}"
-        href="{% url 'dashboard:category-list' %}">
-        <i class="ti ti-category"></i><span class="nav-text">Categories</span>
+      <a class="nav-link {% if nav_section == 'collections' %}active{% endif %}"
+        href="{% url 'dashboard:collection-list' %}">
+        <i class="ti ti-category"></i><span class="nav-text">Collections</span>
+      </a>
+    </li>
+    <li>
+      <a class="nav-link {% if nav_section == 'styles' %}active{% endif %}"
+        href="{% url 'dashboard:style-list' %}">
+        <i class="ti ti-shirt"></i><span class="nav-text">Styles</span>
+      </a>
+    </li>
+    <li>
+      <a class="nav-link {% if nav_section == 'fabrics' %}active{% endif %}"
+        href="{% url 'dashboard:fabric-list' %}">
+        <i class="ti ti-texture"></i><span class="nav-text">Fabrics</span>
+      </a>
+    </li>
+    <li>
+      <a class="nav-link {% if nav_section == 'occasions' %}active{% endif %}"
+        href="{% url 'dashboard:occasion-list' %}">
+        <i class="ti ti-confetti"></i><span class="nav-text">Occasions</span>
+      </a>
+    </li>
+    <li>
+      <a class="nav-link {% if nav_section == 'grades' %}active{% endif %}"
+        href="{% url 'dashboard:grade-list' %}">
+        <i class="ti ti-award"></i><span class="nav-text">Grades</span>
       </a>
     </li>
     <li>

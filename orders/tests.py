@@ -5,7 +5,7 @@ from __future__ import annotations
 from django.test import TestCase
 
 from accounts.services import register_customer_email
-from catalog.models import Category, Product
+from catalog.models import Product
 from core.models import Currency
 from orders.models import Order, OrderItem, OrderStatus
 from orders.services import transition_order_status
@@ -27,12 +27,10 @@ class RestockOnCancelRefundTests(TestCase):
         self.profile = register_customer_email(
             email="restock-test@example.com", password="testpass12345", name="Restock Test"
         )
-        category = Category.objects.create(name="Restock Category", slug="restock-category")
         self.product = Product.objects.create(
             name="Restock Yarn",
             slug="restock-yarn",
             sku="SKU-RESTOCK-1",
-            category=category,
             base_price="500.00",
             mrp="500.00",
             purchase_price="300.00",

@@ -1,0 +1,18 @@
+{# Renders a CheckboxSelectMultiple bound field (e.g. M2M taxonomy pickers) as Bootstrap checks. #}
+<div class="mb-3">
+  <label class="form-label">{{ field.label }}</label>
+  {% if field %}
+  <div class="d-flex flex-wrap gap-3">
+    {% for subwidget in field %}
+    <div class="form-check">
+      {{ subwidget.tag }}
+      <label class="form-check-label" for="{{ subwidget.id_for_label }}">{{ subwidget.choice_label }}</label>
+    </div>
+    {% empty %}
+    <span class="text-secondary small">None configured yet.</span>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+  {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+</div>

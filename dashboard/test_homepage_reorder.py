@@ -15,7 +15,7 @@ from cms.models import HomeVideo, HomepageSection, HomepageSectionType
 def _make_sections() -> list[HomepageSection]:
     kinds = [
         HomepageSectionType.HERO_SLIDER,
-        HomepageSectionType.SHOP_BY_CATEGORY,
+        HomepageSectionType.SHOP_BY_COLLECTION,
         HomepageSectionType.PROMO_BANNERS,
         HomepageSectionType.SERVICE_STRIP,
     ]
@@ -54,7 +54,7 @@ class ReorderEndpointTests(TestCase):
             [
                 HomepageSectionType.PROMO_BANNERS,
                 HomepageSectionType.SERVICE_STRIP,
-                HomepageSectionType.SHOP_BY_CATEGORY,
+                HomepageSectionType.SHOP_BY_COLLECTION,
                 HomepageSectionType.HERO_SLIDER,
             ],
         )

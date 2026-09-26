@@ -158,6 +158,11 @@ CELERY_BEAT_SCHEDULE = {
         "task": "core.tasks.refresh_sitemap_cache",
         "schedule": crontab(hour=0, minute=45),
     },
+
+    "recover-stale-razorpay-orders-hourly": {
+        "task": "payments.tasks.recover_stale_razorpay_orders",
+        "schedule": 3600.0,
+    },
 }
 
 STATIC_URL = "/static/"

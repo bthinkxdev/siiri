@@ -205,13 +205,30 @@
             <div class="col-md-4">{% include "dashboard/partials/_field.html" with field=form.sku %}</div>
             <div class="col-md-4">{% include "dashboard/partials/_field.html" with field=form.hsn_code %}</div>
             <div class="col-md-4">{% include "dashboard/partials/_field.html" with field=form.slug %}</div>
-            <div class="col-md-4">{% include "dashboard/partials/_field.html" with field=form.category %}</div>
             {% if form.brand %}<div class="col-md-4">{% include "dashboard/partials/_field.html" with field=form.brand %}</div>{% endif %}
             <div class="col-md-4">{% include "dashboard/partials/_field.html" with field=form.size_chart %}</div>
             <div class="col-md-3">{% include "dashboard/partials/_field.html" with field=form.base_price %}</div>
             <div class="col-md-3">{% include "dashboard/partials/_field.html" with field=form.mrp %}</div>
             <div class="col-md-3">{% include "dashboard/partials/_field.html" with field=form.purchase_price %}</div>
             <div class="col-md-3">{% include "dashboard/partials/_field.html" with field=form.color %}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header panel-header">
+          <div>
+            <h3 class="panel-title">Merchandising</h3>
+            <p class="panel-sub">Which collections and facets this product appears under on the storefront</p>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">{% include "dashboard/partials/_checkbox_group_field.html" with field=form.collections %}</div>
+            <div class="col-md-6">{% include "dashboard/partials/_checkbox_group_field.html" with field=form.styles %}</div>
+            <div class="col-md-6">{% include "dashboard/partials/_checkbox_group_field.html" with field=form.fabrics %}</div>
+            <div class="col-md-6">{% include "dashboard/partials/_checkbox_group_field.html" with field=form.occasions %}</div>
+            <div class="col-md-6">{% include "dashboard/partials/_checkbox_group_field.html" with field=form.grades %}</div>
           </div>
         </div>
       </div>

@@ -16,7 +16,7 @@ from catalog.forms import ReviewSubmissionForm
 from catalog.services import submit_review
 
 from catalog.selectors import (
-    get_category_by_slug,
+    get_collection_by_slug,
     get_plp_filter_options,
     get_plp_products,
     get_product_detail,
@@ -33,22 +33,22 @@ from core.seo import build_plp_canonical_url, build_product_json_ld, resolve_met
 def _parse_plp_filters(request: HttpRequest) -> dict:
     """Parse shareable PLP filter query params into a selector filter dict."""
     filters: dict = {}
-    category_id = request.GET.get("category")
-    subcategory_id = request.GET.get("subcategory")
-    if subcategory_id:
-        filters["category_id"] = int(subcategory_id)
-        filters["subcategory_id"] = int(subcategory_id)
-        if category_id:
-            filters["parent_category_id"] = int(category_id)
-    elif category_id:
-        filters["category_id"] = int(category_id)
-
+    if q := request.GET.get("q"):
+        q = q.strip()
+        if q:
+            filters["q"] = q
+    if collection_id := request.GET.get("collection"):
+        filters["collection_id"] = int(collection_id)
+    if style_id := request.GET.get("style"):
+        filters["style_id"] = int(style_id)
+    if fabric_id := request.GET.get("fabric"):
+        filters["fabric_id"] = int(fabric_id)
     if occasion_id := request.GET.get("occasion"):
         filters["occasion_id"] = int(occasion_id)
+    if grade_id := request.GET.get("grade"):
+        filters["grade_id"] = int(grade_id)
     if (brand_id := request.GET.get("brand")) and is_enabled("brands"):
         filters["brand_id"] = int(brand_id)
-    if recipient_id := request.GET.get("recipient"):
-        filters["recipient_id"] = int(recipient_id)
     if color := request.GET.get("color"):
         filters["color"] = color
     if request.GET.get("featured") == "1":
@@ -67,68 +67,59 @@ def _parse_plp_filters(request: HttpRequest) -> dict:
 
 
 @require_GET
-def plp_view(request: HttpRequest, category_slug: str | None = None) -> HttpResponse:
+def plp_view(request: HttpRequest, collection_slug: str | None = None) -> HttpResponse:
     """Product listing page with HTMX partial support for the product grid."""
     filters = _parse_plp_filters(request)
-    category = None
-    if category_slug:
-        category = get_category_by_slug(slug=category_slug)
-        if category is None:
-            raise Http404("Category not found")
+    collection = None
+    if collection_slug:
+        collection = get_collection_by_slug(slug=collection_slug)
+        if collection is None:
+            raise Http404("Collection not found")
+        filters["collection_id"] = collection.pk
 
-        if not filters.get("subcategory_id"):
-            filters["category_id"] = category.pk
-
-    resolved_cat = category
-    if not resolved_cat and (cat_id := filters.get("category_id")):
-        from catalog.models import Category
-
-        resolved_cat = Category.objects.filter(pk=cat_id, is_active=True).first()
-
-    subcategories = []
-    if resolved_cat:
-        if resolved_cat.parent_id:
-            subcategories = list(resolved_cat.parent.children.filter(is_active=True))
-            filters["subcategory_id"] = resolved_cat.pk
-            filters["parent_category_id"] = resolved_cat.parent_id
-        else:
-            subcategories = list(resolved_cat.children.filter(is_active=True))
-            filters["parent_category_id"] = resolved_cat.pk
+    active_collection = collection
+    search_query = filters.get("q", "")
 
     sort = request.GET.get("sort", "newest")
     page = int(request.GET.get("page", 1))
     plp_data = get_plp_products(filters=filters, sort=sort, page=page, user=request.user)
     filter_options = get_plp_filter_options()
 
-    active_cat = resolved_cat if resolved_cat else None
-    title = (
-        resolve_meta_title(obj=active_cat, fallback="Shop Sarees")
-        if active_cat
-        else "Shop Sarees"
-    )
-    description = (
-        f"Browse {active_cat.name} at {get_site_settings().site_name}."
-        if active_cat
-        else f"Shop sarees online at {get_site_settings().site_name}."
-    )
+    if search_query:
+        title = f'Search results for "{search_query}"'
+        description = f"Search results for \"{search_query}\" at {get_site_settings().site_name}."
+    else:
+        title = (
+            resolve_meta_title(obj=active_collection, fallback="Shop Sarees")
+            if active_collection
+            else "Shop Sarees"
+        )
+        description = (
+            f"Browse {active_collection.name} at {get_site_settings().site_name}."
+            if active_collection
+            else f"Shop sarees online at {get_site_settings().site_name}."
+        )
 
     context = seo_context(
         request=request,
-        obj=active_cat,
+        obj=active_collection,
         title=f"{title} | {get_site_settings().site_name}",
         description=description,
-        canonical_url=build_plp_canonical_url(request=request, category_slug=category_slug),
+        canonical_url=build_plp_canonical_url(request=request, collection_slug=collection_slug),
     )
     context.update(
         {
             "plp": plp_data,
             "filters": filters,
             "sort": sort,
-            "categories": filter_options["categories"],
+            "search_query": search_query,
+            "collections": filter_options["collections"],
+            "styles": filter_options["styles"],
+            "fabrics": filter_options["fabrics"],
+            "occasions": filter_options["occasions"],
+            "grades": filter_options["grades"],
             "brands": filter_options["brands"] if is_enabled("brands") else [],
-            "subcategories": subcategories,
-            "subcategories_map": filter_options.get("subcategories_map", {}),
-            "active_category": active_cat,
+            "active_collection": active_collection,
         }
     )
 
@@ -267,8 +258,8 @@ def search_suggestions_view(request: HttpRequest) -> HttpResponse:
             {
                 "products": [],
                 "brands": [],
-                "categories": [],
-                "equipment_types": [],
+                "collections": [],
+                "total_count": 0,
                 "query": "",
             },
         )
@@ -278,8 +269,8 @@ def search_suggestions_view(request: HttpRequest) -> HttpResponse:
     context = {
         "products": suggestions.get("products", []),
         "brands": suggestions.get("brands", []) if is_enabled("brands") else [],
-        "categories": suggestions.get("categories", []),
-        "equipment_types": suggestions.get("equipment_types", []),
+        "collections": suggestions.get("collections", []),
+        "total_count": suggestions.get("total_count", 0),
         "query": query,
     }
     response = render(
@@ -341,7 +332,7 @@ def rental_list_view(request: HttpRequest) -> HttpResponse:
     from catalog.selectors import _primary_image_prefetch, PLP_CARD_FIELDS
     products = (
         Product.objects.filter(is_active=True, is_rental=True, show_rental_storefront=True)
-        .select_related("category", "brand")
+        .select_related("brand")
         .prefetch_related(_primary_image_prefetch())
         .only(*PLP_CARD_FIELDS)
     )

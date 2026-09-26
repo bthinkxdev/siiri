@@ -11,7 +11,11 @@
   <nav aria-label="breadcrumb" class="jm-breadcrumb mb-2 mb-md-3">
     <ol class="breadcrumb small mb-0">
       <li class="breadcrumb-item"><a href="{% url 'catalog:plp' %}">{% trans "Shop" %}</a></li>
-      <li class="breadcrumb-item"><a href="{% url 'catalog:plp-category' category_slug=product.category.slug %}">{{ product.category.name }}</a></li>
+      {% with primary_collection=product.collections.all.0 %}
+      {% if primary_collection %}
+      <li class="breadcrumb-item"><a href="{% url 'catalog:plp-collection' collection_slug=primary_collection.slug %}">{{ primary_collection.name }}</a></li>
+      {% endif %}
+      {% endwith %}
       <li class="breadcrumb-item active d-none d-md-inline" aria-current="page">{{ product.name|truncatechars:40 }}</li>
     </ol>
   </nav>
@@ -26,9 +30,11 @@
         {{ site_settings.site_name }}{% if product.brand and site_settings.brands_enabled %} · {{ product.brand.name }}{% endif %}
       </p>
       <h1 class="jm-pdp-buybox__title">{{ product.name }}</h1>
-      {% if product.category.tagline %}
-      <p class="jm-pdp-buybox__subtitle">{{ product.category.tagline }}</p>
+      {% with primary_collection=product.collections.all.0 %}
+      {% if primary_collection.tagline %}
+      <p class="jm-pdp-buybox__subtitle">{{ primary_collection.tagline }}</p>
       {% endif %}
+      {% endwith %}
 
       <div class="jm-pdp-buybox__price-row">
         <p class="pdp-price jm-pdp-buybox__price" id="pdp-price">

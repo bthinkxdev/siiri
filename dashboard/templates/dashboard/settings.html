@@ -17,6 +17,12 @@
               <h5 class="border-bottom pb-2 fw-semibold text-dark">Payment Integration</h5>
             </div>
             {% endif %}
+            {% if field.name == 'featured_label' %}
+            <div class="col-12 mt-3 mb-2">
+              <h5 class="border-bottom pb-2 fw-semibold text-dark">Merchandising Labels</h5>
+              <p class="text-secondary small mb-0">Shown on product badges, PLP filters, homepage sections, and the "Shop By" nav — rename here and it updates everywhere.</p>
+            </div>
+            {% endif %}
             {% if field.name == 'delivery_integration_enabled' %}
             <div class="col-12 mt-3 mb-2">
               <h5 class="border-bottom pb-2 fw-semibold text-dark">Feature Switches</h5>

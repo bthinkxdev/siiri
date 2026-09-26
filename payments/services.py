@@ -390,3 +390,111 @@ def handle_razorpay_webhook_event(
     event.payment_transaction = payment_tx
     event.save(update_fields=["status", "payment_transaction", "updated_at"])
     return event, True
+
+
+def recover_stale_razorpay_orders(*, minutes: int = 15) -> list[dict[str, Any]]:
+    """
+    Reconcile CHECKOUT_PENDING Razorpay orders that neither the webhook nor
+    the browser callback ever confirmed (customer paid, then closed the tab
+    before the redirect, and the webhook delivery/retry window also lapsed).
+
+    Scheduled hourly (see CELERY_BEAT_SCHEDULE) so this self-heals instead of
+    depending on an admin remembering to run it manually; also still runnable
+    by hand via `manage.py recover_razorpay_orders`.
+
+    Each recovered order's payment amount is verified against Razorpay's own
+    figure for that specific payment before confirming — the same discipline
+    used by the webhook path — even though the query is already scoped to
+    this transaction's own `razorpay_order_id` server-side by Razorpay.
+
+    Returns a list of dicts describing what was recovered, for logging/display.
+    """
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from orders.models import OrderStatus
+    from payments.adapters.concrete import _get_razorpay_credentials
+
+    key_id, key_secret = _get_razorpay_credentials()
+    if not (key_id and key_secret):
+        logger.warning("recover_stale_razorpay_orders: no Razorpay credentials configured, skipping.")
+        return []
+
+    import requests
+
+    from payments.adapters.concrete import RazorpayAdapter
+
+    adapter = RazorpayAdapter()
+    time_threshold = timezone.now() - timedelta(minutes=minutes)
+
+    stale_txs = PaymentTransaction.objects.filter(
+        order__order_status=OrderStatus.CHECKOUT_PENDING,
+        status=PaymentStatus.PENDING,
+        gateway_key__startswith="razorpay",
+        created_at__lt=time_threshold,
+    ).select_related("order", "currency")
+
+    recovered: list[dict[str, Any]] = []
+
+    for tx in stale_txs:
+        razorpay_order_id = tx.external_intent_id
+        if not razorpay_order_id:
+            continue
+
+        try:
+            resp = requests.get(
+                f"https://api.razorpay.com/v1/orders/{razorpay_order_id}/payments",
+                auth=(key_id, key_secret),
+                timeout=10,
+            )
+        except requests.RequestException as exc:
+            logger.error("recover_stale_razorpay_orders: request failed for tx_id=%s: %s", tx.pk, exc)
+            continue
+
+        if resp.status_code != 200:
+            continue
+
+        expected_paise = int((tx.amount * 100).to_integral_value())
+
+        for payment in resp.json().get("items", []):
+            status = payment.get("status")
+            if status not in ("authorized", "captured"):
+                continue
+
+            received_paise = payment.get("amount")
+            if received_paise != expected_paise:
+                logger.error(
+                    "recover_stale_razorpay_orders: amount mismatch, refusing to confirm: "
+                    "tx_id=%s expected_paise=%s received_paise=%s",
+                    tx.pk, expected_paise, received_paise,
+                )
+                continue
+
+            payment_id = payment.get("id")
+            if status == "authorized":
+                #only authorized, not yet captured — capture now so the funds
+                #aren't auto-released/refunded by Razorpay.
+                adapter.capture_payment(
+                    razorpay_payment_id=payment_id,
+                    amount=tx.amount,
+                    currency=payment.get("currency", tx.currency.code if tx.currency else "INR"),
+                )
+
+            confirm_payment_success(payment_transaction=tx, external_transaction_id=payment_id)
+            tx.refresh_from_db()
+
+            logger.info(
+                "recover_stale_razorpay_orders: recovered order_number=%s tx_id=%s razorpay_payment_id=%s",
+                tx.order.order_number, tx.pk, payment_id,
+            )
+            recovered.append({
+                "order_number": tx.order.order_number,
+                "transaction_id": tx.pk,
+                "razorpay_order_id": razorpay_order_id,
+                "razorpay_payment_id": payment_id,
+                "amount": str(tx.amount),
+            })
+            break
+
+    return recovered

@@ -1,0 +1,7 @@
+{% load i18n %}
+<div id="explore-collections-section">
+    {% for section in section_context.collection_sections %}
+        {% url 'catalog:plp-collection' collection_slug=section.collection.slug as coll_url %}
+        {% include "cms/sections/_product_rail_section.html" with title=section.collection.name view_all=coll_url products=section.products %}
+    {% endfor %}
+</div>

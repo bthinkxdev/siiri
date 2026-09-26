@@ -8,14 +8,14 @@ from django.urls import include, path
 
 from core.sitemaps import (
     BlogPostSitemap,
-    CategorySitemap,
+    CollectionSitemap,
     PageSitemap,
     ProductSitemap,
 )
 
 sitemaps = {
     "products": ProductSitemap,
-    "categories": CategorySitemap,
+    "collections": CollectionSitemap,
     "blog": BlogPostSitemap,
     "pages": PageSitemap,
 }

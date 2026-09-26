@@ -11,7 +11,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from catalog.models import Category
+from catalog.models import Collection
 from cms.models import (
     HomepageSection,
     HomepageSectionType,
@@ -65,8 +65,8 @@ class HomepageBannerTests(TestCase):
         self.assertNotIn("hm-tiles__grid", self.client.get("/").content.decode())
 
     def test_category_circles_render_when_section_active(self) -> None:
-        Category.objects.create(name="Sarees", slug="sarees")
-        self._section(HomepageSectionType.SHOP_BY_CATEGORY, 1)
+        Collection.objects.create(name="Sarees", slug="sarees")
+        self._section(HomepageSectionType.SHOP_BY_COLLECTION, 1)
         body = self.client.get("/").content.decode()
         self.assertIn("hm-circle", body)
         self.assertIn("Sarees", body)
@@ -148,8 +148,8 @@ class HomeSectionsTests(TestCase):
             get_service_highlights()
 
     def test_category_circles_ignore_trust_items(self) -> None:
-        Category.objects.create(name="Sarees", slug="sarees")
-        self._section(HomepageSectionType.SHOP_BY_CATEGORY, config={"trust_items": [{"title": "NopeItem"}]})
+        Collection.objects.create(name="Sarees", slug="sarees")
+        self._section(HomepageSectionType.SHOP_BY_COLLECTION, config={"trust_items": [{"title": "NopeItem"}]})
         body = self._home()
         self.assertNotIn("jm-trust", body)
         self.assertNotIn("NopeItem", body)

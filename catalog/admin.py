@@ -8,7 +8,10 @@ from core.features import FeatureGatedAdminMixin
 
 from catalog.models import (
     Brand,
-    Category,
+    Collection,
+    Fabric,
+    Grade,
+    Occasion,
     Product,
     ProductImage,
     ProductRelation,
@@ -18,19 +21,49 @@ from catalog.models import (
     ReviewPhoto,
     ProductSpecification,
     ProductDocument,
+    Style,
 )
 
 
-@admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
-    """Admin for category tree."""
+@admin.register(Collection)
+class CollectionAdmin(admin.ModelAdmin):
+    """Admin for merchandising collections."""
 
-    list_display = ("name", "slug", "parent", "display_order", "is_active", "show_on_homepage", "updated_at")
+    list_display = ("name", "slug", "display_order", "is_active", "show_on_homepage", "updated_at")
     list_filter = ("is_active", "show_on_homepage")
     search_fields = ("name", "slug")
-    list_select_related = ("parent",)
     prepopulated_fields = {"slug": ("name",)}
     ordering = ("display_order", "name")
+
+
+class _FacetAdmin(admin.ModelAdmin):
+    """Shared admin config for the flat Style/Fabric/Occasion/Grade facets."""
+
+    list_display = ("name", "slug", "display_order", "is_active", "updated_at")
+    list_filter = ("is_active",)
+    search_fields = ("name", "slug")
+    prepopulated_fields = {"slug": ("name",)}
+    ordering = ("display_order", "name")
+
+
+@admin.register(Style)
+class StyleAdmin(_FacetAdmin):
+    """Admin for product styles."""
+
+
+@admin.register(Fabric)
+class FabricAdmin(_FacetAdmin):
+    """Admin for product fabrics."""
+
+
+@admin.register(Occasion)
+class OccasionAdmin(_FacetAdmin):
+    """Admin for product occasions."""
+
+
+@admin.register(Grade)
+class GradeAdmin(_FacetAdmin):
+    """Admin for product grades."""
 
 
 
@@ -73,7 +106,6 @@ class ProductAdmin(admin.ModelAdmin):
     list_display = (
         "name",
         "sku",
-        "category",
         "brand",
         "base_price",
         "is_active",
@@ -88,11 +120,16 @@ class ProductAdmin(admin.ModelAdmin):
         "is_new_arrival",
         "is_featured",
         "show_home_spotlight",
-        "category",
+        "collections",
+        "styles",
+        "fabrics",
+        "occasions",
+        "grades",
         "brand",
     )
     search_fields = ("name", "slug", "sku")
-    list_select_related = ("category", "brand")
+    list_select_related = ("brand",)
+    filter_horizontal = ("collections", "styles", "fabrics", "occasions", "grades")
     prepopulated_fields = {"slug": ("name",)}
     inlines = [
         ProductVariantInline,

@@ -1,14 +1,14 @@
-{# Homepage product rail. Params: title, view_all (URL), products, badge, rail_style ("single_row" for one scrollable row; default is the two-row grid). Renders nothing without products. #}
+{# Homepage product rail. Params: title, view_all (URL), products, badge. Renders nothing without products. #}
 {% load i18n %}
 {% if products %}
 <section class="hm-rail jm-rail-section" aria-label="{{ title }}">
   <div class="hm-wrap">
-    {% include "cms/sections/_ornament_head.html" with title=title view_all=view_all %}
+    {% include "cms/sections/_ornament_head.html" with title=title %}
     <div class="jm-featured__rail">
       <button type="button" class="jm-rail-arrow jm-rail-arrow--prev" data-rail-scroll="prev" aria-label="{% trans 'Previous products' %}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
-      <div class="product-rail-scroll jm-product-rail__track{% if rail_style == 'single_row' %} jm-product-rail__track--single-row{% endif %}" role="list" data-rail-track>
+      <div class="product-rail-scroll jm-product-rail__track" role="list" data-rail-track>
         {% for product in products %}
         <div class="product-rail-item" role="listitem">
           {% include "catalog/partials/product_card.html" with product=product force_badge=badge %}
@@ -19,6 +19,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
       </button>
     </div>
+    <div class="jm-rail-dots" data-rail-dots></div>
+    {% if view_all %}
+    <a href="{{ view_all }}" class="jm-rail-viewall">{% trans "View All" %}</a>
+    {% endif %}
   </div>
 </section>
 {% endif %}

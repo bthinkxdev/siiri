@@ -11,7 +11,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from catalog.models import Category, Product
+from catalog.models import Product
 from cms.models import (
     HeroSlide,
     HomeVideo,
@@ -30,12 +30,10 @@ def _section(section_type: str, title: str = "", order: int = 1, config: dict | 
 
 
 def _make_product(slug: str, **flags) -> Product:
-    category, _ = Category.objects.get_or_create(slug="cat", defaults={"name": "Cat"})
     return Product.objects.create(
         name=f"Saree {slug}",
         slug=slug,
         sku=f"SKU-{slug}",
-        category=category,
         base_price="900.00",
         mrp="900.00",
         purchase_price="500.00",
@@ -145,7 +143,7 @@ class ProductRailSectionTests(TestCase):
         _section(HomepageSectionType.FEATURED_PRODUCTS)
         _make_product("one")
         body = self.client.get("/").content.decode()
-        self.assertIn("Featured Products", body)
+        self.assertIn("Featured", body)
         # markup the rail JS depends on
         for hook in ("data-rail-track", 'data-rail-scroll="prev"', 'data-rail-scroll="next"', "jm-featured__rail"):
             self.assertIn(hook, body)

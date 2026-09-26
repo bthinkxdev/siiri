@@ -1,4 +1,4 @@
-"""Catalog management views: products, categories, occasions, brands, recipients, reviews."""
+"""Catalog management views: products, collections, styles, fabrics, occasions, grades, brands, reviews."""
 
 from __future__ import annotations
 
@@ -9,7 +9,18 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
-from catalog.models import Brand, Category, Product, Review, HomePageProduct, SizeChart
+from catalog.models import (
+    Brand,
+    Collection,
+    Fabric,
+    Grade,
+    HomePageProduct,
+    Occasion,
+    Product,
+    Review,
+    SizeChart,
+    Style,
+)
 from core.models import Currency
 from dashboard import forms
 from dashboard.access import dashboard_required
@@ -29,8 +40,8 @@ class ProductListView(DashboardListView):
     singular_name = "Product"
     plural_name = "Products"
     search_fields = ["name", "sku"]
-    select_related = ["category", "brand", "homepage_featured"]
-    prefetch_related = ["images"]
+    select_related = ["brand", "homepage_featured"]
+    prefetch_related = ["images", "collections"]
     paginate_by = 20
 
     def get_queryset(self):
@@ -62,15 +73,11 @@ class ProductListView(DashboardListView):
             else:
                 qs = qs.none()
 
-        category = self.request.GET.get("category", "")
-        if category.isdigit():
-            category_id = int(category)
-            category_ids = [category_id]
-            category_ids.extend(
-                Category.objects.filter(parent_id=category_id).values_list("id", flat=True)
-            )
-            qs = qs.filter(category_id__in=category_ids)
-            
+        collection = self.request.GET.get("collection", "")
+        if collection.isdigit():
+            qs = qs.filter(collections__id=int(collection)).distinct()
+
+
         if status == "top" and top_product_ids:
             preserved_order = Case(*[When(pk=pk, then=Value(pos)) for pos, pk in enumerate(top_product_ids)], output_field=IntegerField())
             return qs.order_by(preserved_order)
@@ -107,11 +114,11 @@ class ProductListView(DashboardListView):
         context = super().get_context_data(**kwargs)
         default_currency = Currency.objects.filter(is_default=True).first()
         context["currency_symbol"] = default_currency.symbol if default_currency else ""
-        context["categories"] = Category.objects.order_by("name")
+        context["collections"] = Collection.objects.order_by("name")
         status_filter = self.request.GET.get("status", "")
-        category_filter = self.request.GET.get("category", "")
+        collection_filter = self.request.GET.get("collection", "")
         context["status_filter"] = status_filter
-        context["category_filter"] = category_filter
+        context["collection_filter"] = collection_filter
 
         active_filters = []
         if status_filter:
@@ -121,12 +128,12 @@ class ProductListView(DashboardListView):
                 "label": self.STATUS_FILTER_LABELS.get(status_filter, status_filter),
                 "clear_url": f"{self.request.path}?{params.urlencode()}" if params else self.request.path,
             })
-        if category_filter:
-            category = Category.objects.filter(pk=category_filter).first()
+        if collection_filter:
+            collection = Collection.objects.filter(pk=collection_filter).first()
             params = self.request.GET.copy()
-            params.pop("category", None)
+            params.pop("collection", None)
             active_filters.append({
-                "label": category.name if category else "Category",
+                "label": collection.name if collection else "Collection",
                 "clear_url": f"{self.request.path}?{params.urlencode()}" if params else self.request.path,
             })
         context["active_filters"] = active_filters
@@ -299,44 +306,190 @@ def product_home_toggle(request, pk):
     return redirect("dashboard:product-list")
 
 
-class CategoryListView(DashboardListView):
-    model = Category
-    nav_section = "categories"
-    url_basename = "category"
-    singular_name = "Category"
-    plural_name = "Categories"
+class CollectionListView(DashboardListView):
+    model = Collection
+    nav_section = "collections"
+    url_basename = "collection"
+    singular_name = "Collection"
+    plural_name = "Collections"
     search_fields = ["name", "slug"]
     filter_by_active_status = True
     columns = [
         {"label": "Name", "name": "name"},
         {"label": "Slug", "name": "slug"},
-        {"label": "Parent", "name": "parent.name"},
         {"label": "Order", "name": "display_order"},
         {"label": "Active", "name": "is_active", "type": "bool"},
     ]
 
 
-class CategoryCreateView(DashboardCreateView):
-    model = Category
-    form_class = forms.CategoryForm
-    nav_section = "categories"
-    url_basename = "category"
-    singular_name = "Category"
+class CollectionCreateView(DashboardCreateView):
+    model = Collection
+    form_class = forms.CollectionForm
+    nav_section = "collections"
+    url_basename = "collection"
+    singular_name = "Collection"
 
 
-class CategoryUpdateView(DashboardUpdateView):
-    model = Category
-    form_class = forms.CategoryForm
-    nav_section = "categories"
-    url_basename = "category"
-    singular_name = "Category"
+class CollectionUpdateView(DashboardUpdateView):
+    model = Collection
+    form_class = forms.CollectionForm
+    nav_section = "collections"
+    url_basename = "collection"
+    singular_name = "Collection"
 
 
-class CategoryDeleteView(DashboardDeleteView):
-    model = Category
-    nav_section = "categories"
-    url_basename = "category"
-    singular_name = "Category"
+class CollectionDeleteView(DashboardDeleteView):
+    model = Collection
+    nav_section = "collections"
+    url_basename = "collection"
+    singular_name = "Collection"
+
+
+_FACET_COLUMNS = [
+    {"label": "Name", "name": "name"},
+    {"label": "Slug", "name": "slug"},
+    {"label": "Order", "name": "display_order"},
+    {"label": "Active", "name": "is_active", "type": "bool"},
+]
+
+
+class StyleListView(DashboardListView):
+    model = Style
+    nav_section = "styles"
+    url_basename = "style"
+    singular_name = "Style"
+    plural_name = "Styles"
+    search_fields = ["name", "slug"]
+    filter_by_active_status = True
+    columns = _FACET_COLUMNS
+
+
+class StyleCreateView(DashboardCreateView):
+    model = Style
+    form_class = forms.StyleForm
+    nav_section = "styles"
+    url_basename = "style"
+    singular_name = "Style"
+
+
+class StyleUpdateView(DashboardUpdateView):
+    model = Style
+    form_class = forms.StyleForm
+    nav_section = "styles"
+    url_basename = "style"
+    singular_name = "Style"
+
+
+class StyleDeleteView(DashboardDeleteView):
+    model = Style
+    nav_section = "styles"
+    url_basename = "style"
+    singular_name = "Style"
+
+
+
+class FabricListView(DashboardListView):
+    model = Fabric
+    nav_section = "fabrics"
+    url_basename = "fabric"
+    singular_name = "Fabric"
+    plural_name = "Fabrics"
+    search_fields = ["name", "slug"]
+    filter_by_active_status = True
+    columns = _FACET_COLUMNS
+
+
+class FabricCreateView(DashboardCreateView):
+    model = Fabric
+    form_class = forms.FabricForm
+    nav_section = "fabrics"
+    url_basename = "fabric"
+    singular_name = "Fabric"
+
+
+class FabricUpdateView(DashboardUpdateView):
+    model = Fabric
+    form_class = forms.FabricForm
+    nav_section = "fabrics"
+    url_basename = "fabric"
+    singular_name = "Fabric"
+
+
+class FabricDeleteView(DashboardDeleteView):
+    model = Fabric
+    nav_section = "fabrics"
+    url_basename = "fabric"
+    singular_name = "Fabric"
+
+
+
+class OccasionListView(DashboardListView):
+    model = Occasion
+    nav_section = "occasions"
+    url_basename = "occasion"
+    singular_name = "Occasion"
+    plural_name = "Occasions"
+    search_fields = ["name", "slug"]
+    filter_by_active_status = True
+    columns = _FACET_COLUMNS
+
+
+class OccasionCreateView(DashboardCreateView):
+    model = Occasion
+    form_class = forms.OccasionForm
+    nav_section = "occasions"
+    url_basename = "occasion"
+    singular_name = "Occasion"
+
+
+class OccasionUpdateView(DashboardUpdateView):
+    model = Occasion
+    form_class = forms.OccasionForm
+    nav_section = "occasions"
+    url_basename = "occasion"
+    singular_name = "Occasion"
+
+
+class OccasionDeleteView(DashboardDeleteView):
+    model = Occasion
+    nav_section = "occasions"
+    url_basename = "occasion"
+    singular_name = "Occasion"
+
+
+
+class GradeListView(DashboardListView):
+    model = Grade
+    nav_section = "grades"
+    url_basename = "grade"
+    singular_name = "Grade"
+    plural_name = "Grades"
+    search_fields = ["name", "slug"]
+    filter_by_active_status = True
+    columns = _FACET_COLUMNS
+
+
+class GradeCreateView(DashboardCreateView):
+    model = Grade
+    form_class = forms.GradeForm
+    nav_section = "grades"
+    url_basename = "grade"
+    singular_name = "Grade"
+
+
+class GradeUpdateView(DashboardUpdateView):
+    model = Grade
+    form_class = forms.GradeForm
+    nav_section = "grades"
+    url_basename = "grade"
+    singular_name = "Grade"
+
+
+class GradeDeleteView(DashboardDeleteView):
+    model = Grade
+    nav_section = "grades"
+    url_basename = "grade"
+    singular_name = "Grade"
 
 
 

@@ -291,6 +291,24 @@ class SiteSettings(TimeStampedModel):
             "OFF: all courier UI is hidden and shipment status is updated manually from the dashboard."
         ),
     )
+    featured_label = models.CharField(
+        max_length=40,
+        default="Featured",
+        verbose_name="Featured label",
+        help_text="Display text for featured products — badge, filter, homepage section, and nav all use this.",
+    )
+    bestseller_label = models.CharField(
+        max_length=40,
+        default="Bestseller",
+        verbose_name="Bestseller label",
+        help_text="Display text for bestseller products — badge, filter, homepage section, and nav all use this.",
+    )
+    new_arrival_label = models.CharField(
+        max_length=40,
+        default="New Arrivals",
+        verbose_name="New arrivals label",
+        help_text="Display text for new arrival products — badge, filter, homepage section, and nav all use this.",
+    )
     brands_enabled = models.BooleanField(default=False, verbose_name="Brands")
     subscriptions_enabled = models.BooleanField(default=False, verbose_name="Subscriptions")
     rentals_enabled = models.BooleanField(default=False, verbose_name="Rentals")
