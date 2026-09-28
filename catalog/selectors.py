@@ -114,26 +114,26 @@ def get_homepage_product_rails() -> dict[str, list[Product]]:
     if not new_arrivals:
         # nothing flagged as a new arrival: "recently added" shows the newest products instead
         new_arrivals = list(_homepage_rail_queryset(filters=Q()))
-    featured = list(_homepage_rail_queryset(
-        filters=Q(),
-        ordering=(
-            Case(
-                When(homepage_featured__is_shown=True, then=Value(1)),
-                When(homepage_featured__is_shown=False, then=Value(-1)),
-                default=Value(0),
-                output_field=IntegerField()
-            ).desc(),
-            Case(
-                When(homepage_featured__is_shown=True, then=F("homepage_featured__updated_at")),
-                default=None
-            ).desc(nulls_last=True),
-            Case(
-                When(homepage_featured__is_shown=False, then=F("homepage_featured__updated_at")),
-                default=None
-            ).asc(nulls_last=True),
-            "-created_at"
-        )
-    ))
+    featured_ordering = (
+        Case(
+            When(homepage_featured__is_shown=True, then=Value(1)),
+            When(homepage_featured__is_shown=False, then=Value(-1)),
+            default=Value(0),
+            output_field=IntegerField()
+        ).desc(),
+        Case(
+            When(homepage_featured__is_shown=True, then=F("homepage_featured__updated_at")),
+            default=None
+        ).desc(nulls_last=True),
+        Case(
+            When(homepage_featured__is_shown=False, then=F("homepage_featured__updated_at")),
+            default=None
+        ).asc(nulls_last=True),
+        "-created_at",
+    )
+    featured = list(_homepage_rail_queryset(filters=Q(is_featured=True), ordering=featured_ordering))
+    if not featured:
+        featured = list(_homepage_rail_queryset(filters=Q(), ordering=featured_ordering))
     rails = {
         "trending": bestseller_rail,
         "bestsellers": bestseller_rail,
@@ -213,6 +213,13 @@ def _decorate_homepage_rail_prices(rails: dict[str, list[Product]]) -> None:
         product.original_price = eff_base
 
 
+def _merchandising_flag_q(field: str) -> Q:
+
+    if Product.objects.filter(is_active=True, **{field: True}).exists():
+        return Q(**{field: True})
+    return Q()
+
+
 def _apply_plp_filters(queryset: QuerySet[Product], filters: dict[str, Any]) -> QuerySet[Product]:
     """Apply PLP filter dict to a base queryset."""
     needs_distinct = False
@@ -249,11 +256,11 @@ def _apply_plp_filters(queryset: QuerySet[Product], filters: dict[str, Any]) -> 
     if color := filters.get("color"):
         queryset = queryset.filter(color__iexact=color)
     if filters.get("featured"):
-        queryset = queryset.filter(is_featured=True)
+        queryset = queryset.filter(_merchandising_flag_q("is_featured"))
     if filters.get("bestseller"):
         queryset = queryset.filter(is_bestseller=True)
     if filters.get("new_arrival"):
-        queryset = queryset.filter(is_new_arrival=True)
+        queryset = queryset.filter(_merchandising_flag_q("is_new_arrival"))
     if filters.get("in_stock"):
         queryset = queryset.filter(stock_quantity__gt=0)
     if min_price := filters.get("min_price"):

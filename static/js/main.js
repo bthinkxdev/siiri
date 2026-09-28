@@ -1032,6 +1032,7 @@ document.addEventListener('DOMContentLoaded', () => {
         section.querySelectorAll('[data-spotlight-variant-input]').forEach(function (input) {
           input.value = variantId;
         });
+        if (window.jmSyncSpotlightCartState) window.jmSyncSpotlightCartState();
 
         var variantsData = [];
         try {
@@ -1292,7 +1293,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
 
           var label = document.createElement('label');
-          label.className = 'd-block position-relative border rounded-3 p-2 cursor-pointer';
+          label.className = 'jm-atc-variant d-block position-relative border rounded-3 p-2 cursor-pointer';
           label.style.minWidth = '100px';
           label.setAttribute('for', inputId);
           if (isOutVariant) {
@@ -1338,14 +1339,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (discount) {
               discount.classList.add('d-none');
             }
-            
-            variantsGroup.querySelectorAll('label').forEach(l => {
-              l.classList.remove('border-primary');
-              l.style.borderWidth = '1px';
-            });
-            label.classList.add('border-primary');
-            label.style.borderWidth = '2px';
-            
+
+
             updateAtcState(productId ? productId.value : '', this.value, null);
           });
 
@@ -1496,6 +1491,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       window.jmCartItemKeys.add(vid ? (pid + '_' + vid) : pid);
       setProductCardCartState(pid, true);
+      if (window.jmSyncSpotlightCartState) window.jmSyncSpotlightCartState();
     }
     lastSync = 0;
     syncCartStatus();
@@ -1509,6 +1505,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.jmCartItemKeys.delete(vid ? (pid + '_' + vid) : pid);
       }
       setProductCardCartState(pid, false);
+      if (window.jmSyncSpotlightCartState) window.jmSyncSpotlightCartState();
     }
     lastSync = 0;
     syncCartStatus();
@@ -1568,6 +1565,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (stickyView) stickyView.classList.toggle('d-none', !inPdp);
           }
         }
+
+        if (window.jmSyncSpotlightCartState) window.jmSyncSpotlightCartState();
       }).catch(function () { });
   }
 
@@ -1661,4 +1660,26 @@ document.addEventListener('DOMContentLoaded', () => {
       history.replaceState(null, '', '#' + id);
     }
   });
+})();
+
+
+(function () {
+  'use strict';
+
+  window.jmSyncSpotlightCartState = function () {
+    if (!window.jmCartItemKeys) return; // no client-side cart state yet: keep server-rendered state
+    document.querySelectorAll('.jm-spotlight').forEach(function (section) {
+      var addGrp = section.querySelector('[data-spotlight-add-group]');
+      var viewGrp = section.querySelector('[data-spotlight-view-group]');
+      if (!addGrp || !viewGrp) return;
+      var form = addGrp.querySelector('form');
+      if (!form) return;
+      var pid = (form.querySelector('input[name="product_id"]') || {}).value;
+      var vid = (form.querySelector('input[name="variant_id"]') || {}).value;
+      if (!pid) return;
+      var inCart = window.jmCartItemKeys.has(vid ? (pid + '_' + vid) : String(pid));
+      addGrp.classList.toggle('d-none', inCart);
+      viewGrp.classList.toggle('d-none', !inCart);
+    });
+  };
 })();

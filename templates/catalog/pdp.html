@@ -130,24 +130,24 @@
 
           <div id="pdp-stock-error-msg" class="text-danger small mb-2 d-none"></div>
 
-          <div id="pdp-add-to-cart-group" class="{% if is_in_cart %}d-none{% endif %}">
-            <div class="jm-pdp-qty-row">
-              <span class="jm-pdp-field__label">{% trans "Quantity" %}</span>
-              <div class="qty-stepper jm-pdp-qty" aria-label="{% trans 'Quantity' %}" {% if not price_data.is_in_stock %}style="opacity: 0.5;" {% endif %}>
-                <button class="qty-stepper__btn" type="button"
-                  onclick="if(window.handlePdpQtyChange) window.handlePdpQtyChange(-1);"
-                  aria-label="{% trans 'Decrease quantity' %}">&minus;</button>
-                <input type="number" id="pdp-qty" class="qty-stepper__value pdp-qty-input"
-                  data-max-stock="{{ price_data.stock_quantity|default_if_none:product.stock_quantity }}"
-                  value="1" min="1" readonly aria-label="{% trans 'Quantity' %}">
-                <button class="qty-stepper__btn" type="button"
-                  onclick="if(window.handlePdpQtyChange) window.handlePdpQtyChange(1);"
-                  aria-label="{% trans 'Increase quantity' %}">&plus;</button>
+          <div class="jm-pdp-cta-grid">
+            <div id="pdp-add-to-cart-group" class="jm-pdp-cta-state {% if is_in_cart %}d-none{% endif %}">
+              <div class="jm-pdp-qty-row">
+                <span class="jm-pdp-field__label">{% trans "Quantity" %}</span>
+                <div class="qty-stepper jm-pdp-qty" aria-label="{% trans 'Quantity' %}" {% if not price_data.is_in_stock %}style="opacity: 0.5;" {% endif %}>
+                  <button class="qty-stepper__btn" type="button"
+                    onclick="if(window.handlePdpQtyChange) window.handlePdpQtyChange(-1);"
+                    aria-label="{% trans 'Decrease quantity' %}">&minus;</button>
+                  <input type="number" id="pdp-qty" class="qty-stepper__value pdp-qty-input"
+                    data-max-stock="{{ price_data.stock_quantity|default_if_none:product.stock_quantity }}"
+                    value="1" min="1" readonly aria-label="{% trans 'Quantity' %}">
+                  <button class="qty-stepper__btn" type="button"
+                    onclick="if(window.handlePdpQtyChange) window.handlePdpQtyChange(1);"
+                    aria-label="{% trans 'Increase quantity' %}">&plus;</button>
+                </div>
               </div>
-            </div>
 
-            <div class="jm-pdp-buybox__row">
-              <form id="buy-form" method="post" action="{% url 'cart:add' %}" class="jm-pdp-buybox__atc flex-grow-1"
+              <form id="buy-form" method="post" action="{% url 'cart:add' %}" class="jm-pdp-buybox__atc jm-pdp-cta-grid__atc"
                 hx-post="{% url 'cart:add' %}" hx-target="#cart-drawer-body" hx-swap="innerHTML">
                 {% csrf_token %}
                 <input type="hidden" name="product_id" value="{{ product.pk }}">
@@ -159,27 +159,25 @@
                   {% if price_data.is_in_stock %}{% trans "Add to Cart" %}{% else %}{% trans "Sold out" %}{% endif %}
                 </button>
               </form>
-
-              <form id="buy-now-form" method="post" action="{% url 'cart:add' %}" class="flex-grow-1"
-                hx-post="{% url 'cart:add' %}" hx-target="#cart-drawer-body" hx-swap="innerHTML">
-                {% csrf_token %}
-                <input type="hidden" name="product_id" value="{{ product.pk }}">
-                <input type="hidden" name="quantity" class="pdp-qty-input" value="1">
-                <input type="hidden" name="variant_id" class="pdp-variant-id-input" value="{{ selected_variant_id }}">
-                <button type="submit" name="buy_now" value="true"
-                  class="btn btn-floward w-100 jm-pdp-btn jm-pdp-btn--primary" {% if not price_data.is_in_stock %}style="cursor: not-allowed;" onclick="event.preventDefault();" {% endif %}>
-                  {% trans "Buy Now" %}
-                </button>
-              </form>
             </div>
-          </div>
 
-          <div id="pdp-view-cart-group" class="{% if not is_in_cart %}d-none{% endif %}">
-            <div class="jm-pdp-buybox__row">
-              <a href="{% url 'cart:page' %}" class="btn btn-outline-floward flex-grow-1 jm-pdp-btn">
+            <div id="pdp-view-cart-group" class="jm-pdp-cta-state {% if not is_in_cart %}d-none{% endif %}">
+              <a href="{% url 'cart:page' %}" class="btn btn-outline-floward w-100 jm-pdp-btn jm-pdp-cta-grid__cart">
                 {% trans "View Cart" %}
               </a>
             </div>
+
+            <form id="buy-now-form" method="post" action="{% url 'cart:add' %}" class="jm-pdp-cta-grid__buy"
+              hx-post="{% url 'cart:add' %}" hx-target="#cart-drawer-body" hx-swap="innerHTML">
+              {% csrf_token %}
+              <input type="hidden" name="product_id" value="{{ product.pk }}">
+              <input type="hidden" name="quantity" class="pdp-qty-input" value="1">
+              <input type="hidden" name="variant_id" class="pdp-variant-id-input" value="{{ selected_variant_id }}">
+              <button type="submit" name="buy_now" value="true"
+                class="btn btn-floward w-100 jm-pdp-btn jm-pdp-btn--primary" {% if not price_data.is_in_stock %}style="cursor: not-allowed;" onclick="event.preventDefault();" {% endif %}>
+                {% trans "Buy Now" %}
+              </button>
+            </form>
           </div>
 
           <div class="jm-pdp-buybox__secondary-actions">
@@ -253,7 +251,7 @@
           <input type="hidden" name="quantity" class="pdp-qty-input" value="1">
           <input type="hidden" name="variant_id" class="pdp-variant-id-input" value="{{ selected_variant_id }}">
           <button type="{% if price_data.is_in_stock %}submit{% else %}button{% endif %}"
-            class="btn jm-pdp-sticky__btn {% if not price_data.is_in_stock %}disabled{% endif %}" {% if not price_data.is_in_stock %}style="cursor: not-allowed; opacity: 0.6; pointer-events: auto;"
+            class="btn btn-outline-floward jm-pdp-sticky__btn {% if not price_data.is_in_stock %}disabled{% endif %}" {% if not price_data.is_in_stock %}style="cursor: not-allowed; opacity: 0.6; pointer-events: auto;"
             onclick="event.preventDefault(); return false;" {% endif %}>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bag me-2"
               viewBox="0 0 16 16">

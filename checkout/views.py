@@ -59,10 +59,9 @@ def _grant_order_session_access(request: HttpRequest, order) -> None:
 
 def _can_view_order(request: HttpRequest, order) -> bool:
     """Authenticated owner, or the guest session that just placed this order."""
-    if request.user.is_authenticated and hasattr(request.user, "customer_profile"):
-        if order.customer_profile_id == request.user.customer_profile.pk:
-            return True
-    return order.pk in request.session.get("owned_order_ids", [])
+    from orders.selectors import can_view_order
+
+    return can_view_order(request=request, order=order)
 
 
 @require_POST

@@ -5455,18 +5455,10 @@ body.jm-body .jm-qv__actions .qty-stepper__btn {
 
   .jm-pdp-sticky--pill .jm-pdp-sticky__btn {
     border-radius: 50px !important;
-    background-color: #000;
-    color: #fff;
-    border: none;
     min-width: 140px;
     display: flex;
     align-items: center;
     justify-content: center;
-  }
-
-  .jm-pdp-sticky--pill .jm-pdp-sticky__btn:hover {
-    background-color: #333;
-    color: #fff;
   }
 
   .jm-pdp-sticky--pill .jm-pdp-sticky__actions {
@@ -5491,9 +5483,6 @@ body.jm-body .jm-qv__actions .qty-stepper__btn {
 
   .jm-pdp-sticky--pill .jm-pdp-sticky__btn {
     border-radius: 12px !important;
-    background-color: #000;
-    color: #fff;
-    border: none;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -7456,6 +7445,23 @@ body.jm-body .btn-text {
   color: var(--jm-accent);
 }
 
+body.jm-body .btn-ghost.btn-ghost--icon,
+body.jm-body .btn-ghost.btn-ghost--icon:hover,
+body.jm-body .btn-ghost.btn-ghost--icon:focus {
+  text-decoration: none;
+}
+
+body.jm-body .btn-ghost.jm-drawer-remove {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
 body.jm-body .btn-close:focus {
   box-shadow: none;
 }
@@ -7530,7 +7536,7 @@ body.jm-body .modal-content {
 }
 
 /* .offcanvas itself stays flush (screen-edge panels); templates opt into
-   rounding just the exposed edge via Bootstrap's rounded-top-*/rounded-end-*
+   rounding just the exposed edge via Bootstrap's rounded-top-* or rounded-end-*
    utilities, e.g. the bottom-sheet "Shop By" panel. */
 body.jm-body .list-group-item,
 body.jm-body .accordion-item {
@@ -8153,6 +8159,32 @@ body.jm-body .btn-check:focus-visible + .btn {
   outline-offset: 2px;
 }
 
+body.jm-body .jm-atc-variant {
+  cursor: pointer;
+  border-color: var(--jm-border) !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+body.jm-body .atc-variant-radio:not(:disabled):not(:checked) + .jm-atc-variant:hover {
+  border-color: var(--jm-accent) !important;
+}
+
+body.jm-body .atc-variant-radio:checked + .jm-atc-variant {
+  background: var(--jm-accent);
+  border-color: var(--jm-accent) !important;
+  box-shadow: 0 0 0 1px var(--jm-accent);
+}
+
+body.jm-body .atc-variant-radio:checked + .jm-atc-variant,
+body.jm-body .atc-variant-radio:checked + .jm-atc-variant * {
+  color: #fff !important;
+}
+
+body.jm-body .atc-variant-radio:focus-visible + .jm-atc-variant {
+  outline: 2px solid var(--jm-accent);
+  outline-offset: 2px;
+}
+
 body.jm-body .jm-pdp-btn {
   min-height: 52px;
   border-radius: var(--jm-radius) !important;
@@ -8192,6 +8224,12 @@ body.jm-body .jm-pdp-sticky--pill {
 
 body.jm-body .jm-pdp-sticky__btn {
   border-radius: var(--jm-radius) !important;
+}
+
+body.jm-body .jm-pdp-sticky__btn .btn-text {
+  color: inherit;
+  text-decoration: none;
+  padding: 0;
 }
 
 body.jm-body .jm-pdp .accordion-item {
@@ -8357,6 +8395,32 @@ body.jm-body .jm-pdp-qty-row {
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 0.9rem;
+}
+
+.jm-pdp-cta-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 0.65rem;
+  align-items: center;
+}
+
+.jm-pdp-cta-state {
+  display: contents;
+}
+
+.jm-pdp-cta-grid .jm-pdp-qty-row {
+  grid-column: 1 / -1;
+}
+
+.jm-pdp-cta-grid__atc,
+.jm-pdp-cta-grid__cart {
+  grid-column: 1;
+  min-width: 0;
+}
+
+.jm-pdp-cta-grid__buy {
+  grid-column: 2;
+  min-width: 0;
 }
 
 body.jm-body .jm-pdp-buybox__secondary-actions {
@@ -9562,6 +9626,14 @@ body.jm-body .jm-spotlight__media .jm-pdp-gallery__thumb {
   flex: 1 1 150px;
 }
 
+.jm-spotlight__cart-state {
+  display: contents;
+}
+
+body.jm-body .jm-spotlight__form a.jm-pdp-btn {
+  text-decoration: none;
+}
+
 /* Prefixed with body.jm-body: the global `body.jm-body .jm-pdp-btn` tier
    (line ~8156) sets min-height: 52px at higher specificity than the plain
    selector below, so it silently won and stretched these buttons past the
@@ -9822,3 +9894,35 @@ body.jm-body .jm-spotlight__form .jm-pdp-btn {
     transition: none;
   }
 }
+
+.jm-gallery-close {
+  z-index: 1060;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.jm-gallery-close svg {
+  flex: 0 0 auto;
+}
+
+.jm-gallery-close:hover {
+  background: rgba(0, 0, 0, 0.85);
+  transform: scale(1.05);
+}
+
+.jm-gallery-close:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+

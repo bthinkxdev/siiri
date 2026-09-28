@@ -148,6 +148,33 @@ class ProductRailSectionTests(TestCase):
         for hook in ("data-rail-track", 'data-rail-scroll="prev"', 'data-rail-scroll="next"', "jm-featured__rail"):
             self.assertIn(hook, body)
 
+    def test_view_all_plp_falls_back_when_none_flagged(self) -> None:
+        _make_product("one")
+        plp = reverse("catalog:plp")
+        for param in ("new_arrival", "featured"):
+            body = self.client.get(f"{plp}?{param}=1").content.decode()
+            self.assertIn("Saree one", body, param)
+
+    def test_view_all_plp_prefers_flagged_products(self) -> None:
+        _make_product("plain")
+        _make_product("new", is_new_arrival=True)
+        _make_product("feat", is_featured=True)
+        plp = reverse("catalog:plp")
+        new_body = self.client.get(f"{plp}?new_arrival=1").content.decode()
+        self.assertIn("Saree new", new_body)
+        self.assertNotIn("Saree plain", new_body)
+        feat_body = self.client.get(f"{plp}?featured=1").content.decode()
+        self.assertIn("Saree feat", feat_body)
+        self.assertNotIn("Saree plain", feat_body)
+
+    def test_featured_rail_prefers_flagged_products(self) -> None:
+        _section(HomepageSectionType.FEATURED_PRODUCTS)
+        _make_product("plain")
+        _make_product("feat", is_featured=True)
+        body = self.client.get("/").content.decode()
+        self.assertIn("Saree feat", body)
+        self.assertNotIn("Saree plain", body)
+
     def test_empty_sections_render_nothing(self) -> None:
         for kind in (
             HomepageSectionType.NEW_ARRIVALS,

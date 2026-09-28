@@ -204,6 +204,36 @@ class RazorpayGuestOrderAccessTests(TestCase):
         response = self.client.get(reverse("checkout:confirmation", kwargs={"order_id": self.order.pk}))
         self.assertEqual(response.status_code, 200)
 
+    def _invoice_url(self):
+        return reverse("accounts:customer-invoice", kwargs={"pk": self.order.pk})
+
+    def test_invoice_viewable_by_the_guest_session_that_placed_it(self):
+        session = self.client.session
+        session["owned_order_ids"] = [self.order.pk]
+        session.save()
+        #the browser's session key — ownership must come from the session grant.
+        cart = self.order.cart
+        cart.customer_profile = None 
+        cart.session_key = f"bn_{session.session_key}"
+        cart.save(update_fields=["customer_profile", "session_key"])
+        self.assertEqual(self.client.get(reverse("checkout:confirmation", kwargs={"order_id": self.order.pk})).status_code, 200)
+        response = self.client.get(self._invoice_url())
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.order.order_number)
+
+    def test_invoice_viewable_by_the_authenticated_owner(self):
+        self.client.force_login(self.profile.user)
+        self.assertEqual(self.client.get(self._invoice_url()).status_code, 200)
+
+    def test_invoice_not_viewable_by_an_unrelated_session(self):
+        from django.test import Client
+        self.assertEqual(Client().get(self._invoice_url()).status_code, 404)
+
+    def test_invoice_not_viewable_by_another_logged_in_customer(self):
+        other = register_customer_email(email="idor-other@example.com", password="testpass12345", name="Other")
+        self.client.force_login(other.user)
+        self.assertEqual(self.client.get(self._invoice_url()).status_code, 404)
+
 
 class PlaceOrderGatewayUnavailableTests(TestCase):
     """
