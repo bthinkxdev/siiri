@@ -96,31 +96,31 @@
             {% for address in addresses %}
             <div class="form-check mb-2">
               <input class="form-check-input address-radio" type="radio" name="address_id" value="{{ address.pk }}"
-                id="addr-{{ address.pk }}" {% if forloop.first %}checked{% endif %}>
+                id="addr-{{ address.pk }}" {% if draft_new_address %}{% elif draft_address_id %}{% if draft_address_id == address.pk|stringformat:"s" %}checked{% endif %}{% elif forloop.first %}checked{% endif %}>
               <label class="form-check-label small" for="addr-{{ address.pk }}">{{ address.label }} — {{ address.line1 }}, {{ address.city }}{% if address.pincode %} - {{ address.pincode }}{% endif %}</label>
             </div>
             {% endfor %}
             <div class="form-check mb-2">
-              <input class="form-check-input address-radio" type="radio" name="address_id" value="" id="addr-new">
+              <input class="form-check-input address-radio" type="radio" name="address_id" value="" id="addr-new" {% if draft_new_address %}checked{% endif %}>
               <label class="form-check-label small fw-bold text-floward" for="addr-new">+ {% trans "Add a new address" %}</label>
             </div>
           </div>
           {% endif %}
 
-          <div id="new-address-form-fields" class="mt-2" {% if addresses %}style="display: none;"{% endif %}>
+          <div id="new-address-form-fields" class="mt-2" {% if addresses and not draft_new_address %}style="display: none;"{% endif %}>
             <label class="form-label small fw-bold mb-3">{% trans "Enter Delivery Address Details:" %}</label>
             <div class="mb-3">
               <label class="form-label small">{% trans "Address Line 1" %} <span class="text-danger">*</span></label>
-              <input type="text" name="guest_address_line1" class="form-control form-control-sm" value="{% if not addresses %}{{ checkout_session.address.line1|default:'' }}{% endif %}">
+              <input type="text" name="guest_address_line1" class="form-control form-control-sm" value="{{ address_values.line1 }}">
               <div id="error-guest_address_line1" class="text-danger small mt-1"></div>
             </div>
             <div class="mb-3">
               <label class="form-label small">{% trans "Address Line 2 (Optional)" %}</label>
-              <input type="text" name="guest_address_line2" class="form-control form-control-sm" value="{% if not addresses %}{{ checkout_session.address.line2|default:'' }}{% endif %}">
+              <input type="text" name="guest_address_line2" class="form-control form-control-sm" value="{{ address_values.line2 }}">
             </div>
             <div class="mb-3">
               <label class="form-label small">{% trans "City" %} <span class="text-danger">*</span></label>
-              <input type="text" name="guest_city" class="form-control form-control-sm" value="{% if not addresses %}{{ checkout_session.address.city|default:'' }}{% endif %}">
+              <input type="text" name="guest_city" class="form-control form-control-sm" value="{{ address_values.city }}">
               <div id="error-guest_city" class="text-danger small mt-1"></div>
             </div>
             <div class="row g-2 mb-3">
@@ -128,7 +128,7 @@
                 <label class="form-label small">{% trans "State" %} <span class="text-danger">*</span></label>
                 <select name="guest_state" id="guest_state" class="form-select form-select-sm" placeholder="{% trans 'Search and select state...' %}">
                   <option value="">{% trans "Search and select state..." %}</option>
-                  {% with current_state=checkout_session.address.state|default:'' %}
+                  {% with current_state=address_values.state %}
                   {% for state in indian_states %}
                   <option value="{{ state }}" {% if current_state == state %}selected{% endif %}>{{ state }}</option>
                   {% endfor %}
@@ -138,7 +138,7 @@
               </div>
               <div class="col-md-6">
                 <label class="form-label small">{% trans "PIN / Postal Code" %} <span class="text-danger">*</span></label>
-                <input type="text" name="guest_pincode" class="form-control form-control-sm" value="{% if not addresses %}{{ checkout_session.address.pincode|default:'' }}{% endif %}">
+                <input type="text" name="guest_pincode" class="form-control form-control-sm" value="{{ address_values.pincode }}">
                 <div id="error-guest_pincode" class="text-danger small mt-1"></div>
               </div>
             </div>
@@ -243,6 +243,7 @@
         {% if summary.coupon_code %}
         <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
           <span class="small fw-semibold text-floward">{{ summary.coupon_code }}</span>
+          {% if summary.coupon_discount %}<span class="small fw-semibold text-success ms-auto me-2">-{{ display_currency.symbol }} {{ summary.coupon_discount }}</span>{% endif %}
           <form method="post" action="{% url 'checkout:coupon-remove' %}">
             {% csrf_token %}
             <button type="button" class="btn btn-link text-danger p-0 ms-2" style="font-size: 0.8rem; text-decoration: none;" hx-post="{% url 'checkout:coupon-remove' %}" hx-target="#order-summary-container" hx-select="#order-summary-container" hx-swap="outerHTML" hx-include="closest form">{% trans "Remove" %}</button>
@@ -541,6 +542,50 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+  (function () {
+    var url = "{% url 'checkout:save-draft' %}";
+    var timer = null;
+    var dirty = false;
+
+    function isDraftField(el) {
+      if (!el || !el.name) return false;
+      var form = el.form || (el.getAttribute('form') && document.getElementById(el.getAttribute('form')));
+      return !!form && form.id === 'checkout-form' &&
+        (el.name.indexOf('guest_') === 0 || el.name === 'address_id' || el.name === 'delivery_date');
+    }
+    function payload() {
+      var form = document.getElementById('checkout-form');
+      return form ? new FormData(form) : null;
+    }
+    function save(useBeacon) {
+      clearTimeout(timer);
+      if (!dirty) return;
+      var data = payload();
+      if (!data) return;
+      dirty = false;
+      if (useBeacon && navigator.sendBeacon) {
+        navigator.sendBeacon(url, data);
+      } else {
+        fetch(url, { method: 'POST', body: data, credentials: 'same-origin', keepalive: true }).catch(function () {});
+      }
+    }
+    function schedule(e) {
+      if (!isDraftField(e.target)) return;
+      dirty = true;
+      clearTimeout(timer);
+      timer = setTimeout(function () { save(false); }, 400);
+    }
+    document.addEventListener('input', schedule, true);
+    document.addEventListener('change', schedule, true);
+    document.addEventListener('focusout', function (e) { if (isDraftField(e.target)) save(false); }, true);
+    document.addEventListener('htmx:beforeRequest', function (e) {
+      var elt = e.detail && e.detail.elt;
+      if (elt && elt.id !== 'checkout-form') save(false);
+    });
+    window.addEventListener('pagehide', function () { save(true); });
+  })();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
   document.addEventListener("DOMContentLoaded", function () {

@@ -272,16 +272,27 @@ def _apply_plp_filters(queryset: QuerySet[Product], filters: dict[str, Any]) -> 
     return queryset
 
 
+PLP_SORT_FIELDS = {
+    "price_asc": "base_price",
+    "price_desc": "-base_price",
+    "newest": "-created_at",
+    "rating": "-average_rating",
+    "name": "name",
+}
+
+
 def _apply_plp_sort(queryset: QuerySet[Product], sort: str) -> QuerySet[Product]:
-    """Apply PLP sort key to queryset."""
-    sort_map = {
-        "price_asc": "base_price",
-        "price_desc": "-base_price",
-        "newest": "-created_at",
-        "rating": "-average_rating",
-        "name": "name",
-    }
-    primary_sort = sort_map.get(sort, "-created_at")
+    """
+    Apply PLP sort key to queryset.
+
+    """
+    if sort in PLP_SORT_FIELDS:
+        field = PLP_SORT_FIELDS[sort]
+        if field == "-average_rating":
+            return queryset.order_by(F("average_rating").desc(nulls_last=True), "-created_at", "-pk")
+        #"-pk" tiebreaker keeps pagination stable when many products share a price.
+        return queryset.order_by(field, "-pk")
+
     return queryset.order_by(
         Case(
             When(homepage_featured__is_shown=True, then=Value(1)),
@@ -297,14 +308,15 @@ def _apply_plp_sort(queryset: QuerySet[Product], sort: str) -> QuerySet[Product]
             When(homepage_featured__is_shown=False, then=F("homepage_featured__updated_at")),
             default=None
         ).asc(nulls_last=True),
-        primary_sort
+        "-created_at",
+        "-pk",
     )
 
 
 def get_plp_products(
     *,
     filters: Optional[dict[str, Any]] = None,
-    sort: str = "newest",
+    sort: str = "",
     page: int = 1,
     page_size: int = 24,
     user: Optional[Any] = None,
@@ -685,6 +697,7 @@ def get_variant_price(
         is_in_stock = product.stock_quantity > 0
 
     mrp = product.mrp
+    sku = product.sku or ""
 
     if variant_id:
         variant = ProductVariant.objects.filter(pk=variant_id, product=product).first()
@@ -695,6 +708,7 @@ def get_variant_price(
                 mrp = variant.mrp
             resolved_variant_id = variant.pk
             is_in_stock = variant.stock_quantity > 0
+            sku = variant.display_sku
 
     from marketing.selectors import get_active_flash_sale_price
 
@@ -712,6 +726,7 @@ def get_variant_price(
         "low_stock_threshold": getattr(variant, 'low_stock_threshold', getattr(product, 'low_stock_threshold', 5)) if variant_id else getattr(product, 'low_stock_threshold', 5),
         "mrp": str(mrp) if mrp else "",
         "has_mrp_discount": "true" if mrp and mrp > retail_price else "false",
+        "sku": sku,
     }
     if sale["is_flash_sale"]:
         result["original_price"] = str(sale["original_price"])

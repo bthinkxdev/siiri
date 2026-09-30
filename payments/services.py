@@ -71,6 +71,11 @@ def confirm_payment_success(
             cart = order.cart
             from cart.models import CartItem
             CartItem.objects.filter(cart=cart).delete()
+            if cart.coupon_code or cart.coupon_discount:
+                from decimal import Decimal
+                cart.coupon_code = ""
+                cart.coupon_discount = Decimal("0.00")
+                cart.save(update_fields=["coupon_code", "coupon_discount", "updated_at"])
 
         # auto confirm order once online payment succeeds (COD is confirmed manually by an admin)
         from orders.models import OrderStatus

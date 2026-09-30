@@ -32,13 +32,50 @@
               elPriceValue.textContent = symbol + ' ' + parseFloat(data.price).toFixed(2).replace(/\.00$/, '');
             }
 
+            var elSku = document.getElementById('pdp-sku');
+            var elSkuValue = document.getElementById('pdp-sku-value');
+            if (elSku && elSkuValue && data.sku !== undefined) {
+              elSkuValue.textContent = data.sku;
+              elSku.style.display = data.sku ? '' : 'none';
+            }
+
+            function fmt(formatted, raw) {
+              return formatted || (symbol + ' ' + parseFloat(raw).toFixed(2).replace(/\.00$/, ''));
+            }
+
+            var isFlash = data.is_flash_sale === 'true' && !!data.original_price;
+            var elOriginal = document.getElementById('pdp-price-original');
+            if (elOriginal) {
+              if (isFlash) {
+                elOriginal.textContent = fmt(data.formatted_original_price, data.original_price);
+                elOriginal.style.display = '';
+              } else {
+                elOriginal.textContent = '';
+                elOriginal.style.display = 'none';
+              }
+            }
+
             var elMrp = document.getElementById('pdp-price-mrp');
             if (elMrp) {
-              if (data.is_flash_sale !== 'true' && data.has_mrp_discount === 'true' && data.mrp) {
-                elMrp.textContent = symbol + ' ' + parseFloat(data.mrp).toFixed(2).replace(/\.00$/, '');
+              if (!isFlash && data.has_mrp_discount === 'true' && data.mrp) {
+                elMrp.textContent = fmt(data.formatted_mrp, data.mrp);
                 elMrp.style.display = 'inline';
               } else {
                 elMrp.style.display = 'none';
+              }
+            }
+
+            var elBadge = document.getElementById('pdp-discount-badge');
+            if (elBadge) {
+              var pct = 0;
+              if (data.has_mrp_discount === 'true' && parseFloat(data.mrp) > 0) {
+                pct = Math.floor(((parseFloat(data.mrp) - parseFloat(data.price)) / parseFloat(data.mrp)) * 100);
+              }
+              if (pct > 0) {
+                elBadge.textContent = pct + '% ' + (elBadge.getAttribute('data-off-label') || 'OFF');
+                elBadge.style.display = '';
+              } else {
+                elBadge.style.display = 'none';
               }
             }
 

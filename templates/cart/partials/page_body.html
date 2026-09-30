@@ -27,11 +27,11 @@
               <span class="fw-semibold flex-shrink-0">{{ display_currency.symbol }} {{ line.line_subtotal }}</span>
             </div>
             {% if line.variant %}<div class="cart-line__meta">{{ line.variant.name }}</div>{% endif %}
-            {% with max_stock=line.variant.stock_quantity|default_if_none:line.product.stock_quantity %}
-            {% if not line.product.is_in_stock or max_stock <= 0 %}
-            <div class="text-danger small mt-1">{% trans "Out of stock" %}</div>
-            {% elif line.quantity > max_stock %}
-            <div class="text-danger small mt-1">{% trans "Only" %} {{ max_stock }} {% trans "items available in stock." %}</div>
+            {% with max_stock=line.max_stock %}
+            {% if line.is_out_of_stock %}
+            <div class="jm-stock-alert jm-stock-alert--out mt-2" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>{% trans "Out of stock" %}</span></div>
+            {% elif line.exceeds_stock %}
+            <div class="jm-stock-alert jm-stock-alert--low mt-2" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>{% trans "Only" %} {{ max_stock }} {% trans "items available in stock." %}</span></div>
             {% elif error_item_id == line.item.pk and error %}
             <div class="text-danger small mt-1">{{ error }}</div>
             {% endif %}

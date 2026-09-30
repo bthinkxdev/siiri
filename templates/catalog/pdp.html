@@ -38,18 +38,11 @@
 
       <div class="jm-pdp-buybox__price-row">
         <p class="pdp-price jm-pdp-buybox__price" id="pdp-price">
-          {% if price_data.is_flash_sale == "true" %}
-          <span class="was" id="pdp-price-original">{% money_label price_data.original_price display_currency %}</span>
-          {% elif price_data.has_mrp_discount == "true" %}
-          <span class="was" id="pdp-price-mrp" style="text-decoration: line-through; margin-right: 8px;">{% money_label price_data.mrp display_currency %}</span>
-          {% else %}
-          <span class="was" id="pdp-price-mrp" style="text-decoration: line-through; margin-right: 8px; display: none;"></span>
-          {% endif %}
+          <span class="was" id="pdp-price-original" {% if price_data.is_flash_sale != "true" %}style="display: none;"{% endif %}>{% if price_data.is_flash_sale == "true" %}{% money_label price_data.original_price display_currency %}{% endif %}</span>
+          <span class="was" id="pdp-price-mrp" style="text-decoration: line-through; margin-right: 8px;{% if price_data.is_flash_sale == "true" or price_data.has_mrp_discount != "true" %} display: none;{% endif %}">{% if price_data.is_flash_sale != "true" and price_data.has_mrp_discount == "true" %}{% money_label price_data.mrp display_currency %}{% endif %}</span>
           <span id="pdp-price-value">{% money_label price_data.price display_currency %}</span>
         </p>
-        {% if discount_percent %}
-        <span class="jm-pdp-buybox__discount">{{ discount_percent }}% {% trans "OFF" %}</span>
-        {% endif %}
+        <span class="jm-pdp-buybox__discount" id="pdp-discount-badge" data-off-label="{% trans 'OFF' %}" {% if not discount_percent %}style="display: none;"{% endif %}>{% if discount_percent %}{{ discount_percent }}% {% trans "OFF" %}{% endif %}</span>
       </div>
       <p class="jm-pdp-buybox__stock {% if not price_data.is_in_stock %}is-out{% elif price_data.stock_quantity <= price_data.low_stock_threshold %}is-low{% else %}is-in{% endif %}"
         id="pdp-stock-text">
@@ -61,9 +54,9 @@
         {% trans "In stock" %}
         {% endif %}
       </p>
-      {% if product.sku %}
-      <p class="jm-pdp-buybox__sku">{% trans "SKU" %}: {{ product.sku }}</p>
-      {% endif %}
+      {% with pdp_sku=price_data.sku|default:product.sku %}
+      <p class="jm-pdp-buybox__sku" id="pdp-sku" {% if not pdp_sku %}style="display: none;"{% endif %}>{% trans "SKU" %}: <span id="pdp-sku-value">{{ pdp_sku }}</span></p>
+      {% endwith %}
 
       {% if product.average_rating %}
       <div class="jm-pdp-buybox__rating">
@@ -543,5 +536,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/pdp.js' %}?v=3"></script>
+<script src="{% static 'js/pdp.js' %}?v=6"></script>
 {% endblock %}

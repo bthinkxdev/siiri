@@ -414,6 +414,21 @@
           input.focus({ preventScroll: true });
         });
       }
+
+      if (input.form) {
+        input.form.addEventListener('submit', function (event) {
+          var query = input.value.trim();
+          if (!query) {
+            event.preventDefault();
+            input.value = '';
+            if (results) results.innerHTML = '';
+            syncClearButton();
+            input.focus({ preventScroll: true });
+            return;
+          }
+          input.value = query;
+        });
+      }
       document.body.addEventListener('htmx:afterSwap', function (event) {
         if (event.detail.target && event.detail.target.id === 'mobile-search-results') {
           syncClearButton();
@@ -1431,29 +1446,30 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.jm-product-card[data-product-id="' + productId + '"]').forEach(function (card) {
       var fullyInCart = isCardFullyInCart(card, inCart);
       card.dataset.inCart = fullyInCart ? 'true' : 'false';
-      var form = card.querySelector('.jm-product-card__cart');
+      //The add button and the in-cart tick share one absolutely-positioned slot
+      //(.jm-product-card__cart), so swapping them never changes the card's layout.
+      var slot = card.querySelector('.jm-product-card__cart');
+      if (!slot) return;
+      var addBtn = slot.querySelector('[data-jm-add-to-cart]');
       var viewCartLink = card.querySelector('.jm-dynamic-view-cart');
 
       if (fullyInCart) {
-        if (form && !form.classList.contains('d-none')) {
-          var newLink = document.createElement('a');
+        if (!viewCartLink) {
           var cartUrl = '/cart/';
           var existingLink = document.querySelector('a[href*="/cart/"]');
           if (existingLink) cartUrl = existingLink.getAttribute('href');
-
-          newLink.href = cartUrl;
-          newLink.className = 'jm-product-card__atc jm-product-card__atc--in-cart jm-dynamic-view-cart';
-          newLink.setAttribute('aria-label', 'View Cart');
-          newLink.setAttribute('title', 'View Cart');
-          newLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
-
-          form.classList.add('d-none');
-          if (viewCartLink) viewCartLink.replaceWith(newLink);
-          else form.parentNode.insertBefore(newLink, form.nextSibling);
+          viewCartLink = document.createElement('a');
+          viewCartLink.href = cartUrl;
+          viewCartLink.className = 'jm-product-card__atc jm-product-card__atc--in-cart jm-dynamic-view-cart';
+          viewCartLink.setAttribute('aria-label', 'View Cart');
+          viewCartLink.setAttribute('title', 'View Cart');
+          viewCartLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
         }
+        if (viewCartLink.parentNode !== slot) slot.appendChild(viewCartLink);
+        if (addBtn) addBtn.classList.add('d-none');
       } else {
         if (viewCartLink) viewCartLink.remove();
-        if (form) form.classList.remove('d-none');
+        if (addBtn) addBtn.classList.remove('d-none');
       }
     });
 

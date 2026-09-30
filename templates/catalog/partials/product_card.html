@@ -80,9 +80,8 @@
       </form>
     </div>
 
-    <div
-      class="jm-product-card__cart {% if cart_product_ids and product.pk in cart_product_ids %}d-none{% endif %}">
-      <button type="button" class="jm-product-card__atc" data-jm-add-to-cart {% if eff_stock <= 0 %}disabled{% endif %}
+    <div class="jm-product-card__cart">
+      <button type="button" class="jm-product-card__atc {% if cart_product_ids and product.pk in cart_product_ids %}d-none{% endif %}" data-jm-add-to-cart {% if eff_stock <= 0 %}disabled{% endif %}
         aria-label="{% trans 'Add to Cart' %}"
         title="{% if eff_stock > 0 %}{% trans 'Add to Cart' %}{% else %}{% trans 'Unavailable' %}{% endif %}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -91,15 +90,15 @@
           <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
         </svg>
       </button>
+      {% if cart_product_ids and product.pk in cart_product_ids %}
+      <a href="{% url 'cart:page' %}" class="jm-product-card__atc jm-product-card__atc--in-cart jm-dynamic-view-cart"
+        aria-label="{% trans 'View Cart' %}" title="{% trans 'View Cart' %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <path d="M20 6L9 17l-5-5" />
+        </svg>
+      </a>
+      {% endif %}
     </div>
-    {% if cart_product_ids and product.pk in cart_product_ids %}
-    <a href="{% url 'cart:page' %}" class="jm-product-card__atc jm-product-card__atc--in-cart jm-dynamic-view-cart"
-      aria-label="{% trans 'View Cart' %}" title="{% trans 'View Cart' %}">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-        <path d="M20 6L9 17l-5-5" />
-      </svg>
-    </a>
-    {% endif %}
   </div>
 
   <div class="card-body jm-product-card__body d-flex flex-column">

@@ -64,6 +64,33 @@ def _can_view_order(request: HttpRequest, order) -> bool:
     return can_view_order(request=request, order=order)
 
 
+CHECKOUT_DRAFT_SESSION_KEY = "checkout_draft"
+CHECKOUT_DRAFT_FIELDS = (
+    "guest_name", "guest_email", "guest_phone",
+    "guest_address_line1", "guest_address_line2", "guest_city", "guest_state", "guest_pincode",
+    "address_id", "delivery_date",
+)
+
+
+def _save_checkout_draft(request: HttpRequest) -> None:
+    """
+    Remember what the shopper typed on the checkout form (session-scoped).
+
+    """
+    draft = dict(request.session.get(CHECKOUT_DRAFT_SESSION_KEY) or {})
+    for field in CHECKOUT_DRAFT_FIELDS:
+        if field in request.POST:
+            draft[field] = request.POST.get(field, "").strip()[:255]
+    request.session[CHECKOUT_DRAFT_SESSION_KEY] = draft
+
+
+@require_POST
+def checkout_save_draft_view(request: HttpRequest) -> HttpResponse:
+    """Autosave endpoint for the checkout form (debounced from checkout.html)."""
+    _save_checkout_draft(request)
+    return HttpResponse(status=204)
+
+
 @require_POST
 def checkout_update_delivery_charge_view(request: HttpRequest) -> HttpResponse:
     """Update cart delivery charge if COD is selected and return updated summary."""
@@ -168,6 +195,11 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
     elif request.user.is_authenticated:
         contact_name = request.user.get_full_name() or request.user.first_name or request.user.username
         contact_email = request.user.email
+    #what the shopper last typed wins over account data (see _save_checkout_draft)
+    draft = request.session.get(CHECKOUT_DRAFT_SESSION_KEY) or {}
+    contact_name = draft.get("guest_name") or contact_name
+    contact_email = draft.get("guest_email") or contact_email
+    contact_phone = draft.get("guest_phone") or contact_phone
     #known and complete: skip re-asking for it and show a compact summary instead
     has_complete_contact = bool(contact_name and contact_email and contact_phone)
 
@@ -223,6 +255,18 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
     from core.models import State
     INDIAN_STATES = list(State.objects.filter(is_active=True).values_list('name', flat=True))
 
+    session_address = session.address if not addresses else None
+    address_values = {
+        "line1": draft.get("guest_address_line1") or getattr(session_address, "line1", "") or "",
+        "line2": draft.get("guest_address_line2") or getattr(session_address, "line2", "") or "",
+        "city": draft.get("guest_city") or getattr(session_address, "city", "") or "",
+        "state": draft.get("guest_state") or getattr(session_address, "state", "") or "",
+        "pincode": draft.get("guest_pincode") or getattr(session_address, "pincode", "") or "",
+    }
+    #saved-address users who had switched to "Add a new address"
+    draft_new_address = bool(addresses) and draft.get("address_id", None) == "" and bool(address_values["line1"])
+    draft_address_id = draft.get("address_id") or ""
+
     from marketing.selectors import has_any_active_coupons
     return render(
         request,
@@ -245,6 +289,9 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
             "contact_email": contact_email,
             "contact_phone": contact_phone,
             "has_complete_contact": has_complete_contact,
+            "address_values": address_values,
+            "draft_new_address": draft_new_address,
+            "draft_address_id": draft_address_id,
         },
     )
 
@@ -258,6 +305,8 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
 )
 def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
     """Place order and process payment in one HTMX step."""
+    #keep the entered details even if this attempt fails or the online payment is cancelled
+    _save_checkout_draft(request)
     form = CheckoutPaymentForm(request.POST)
     if not form.is_valid():
         return render(
@@ -529,6 +578,8 @@ def checkout_confirmation_view(request: HttpRequest, order_id: int) -> HttpRespo
     order = get_object_or_404(Order, pk=order_id)
     if not _can_view_order(request, order):
         raise Http404("Order not found.")
+    #order went through: the next checkout starts clean
+    request.session.pop(CHECKOUT_DRAFT_SESSION_KEY, None)
     return render(
         request,
         "checkout/confirmation_page.html",

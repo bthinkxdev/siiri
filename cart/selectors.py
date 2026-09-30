@@ -275,7 +275,8 @@ def get_cart_summary(*, cart: Cart) -> CartSummary:
 
     delivery_charge = cart.delivery_charge
 
-    coupon_code = cart.coupon_code
+    #an empty cart never carries a coupon (guards against a code left over from a past order)
+    coupon_code = cart.coupon_code if lines else ""
     coupon_discount = Decimal("0.00")
     if coupon_code:
         from marketing.services import validate_coupon_for_cart

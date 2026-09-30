@@ -229,6 +229,19 @@ class RazorpayGuestOrderAccessTests(TestCase):
         from django.test import Client
         self.assertEqual(Client().get(self._invoice_url()).status_code, 404)
 
+    def test_confirmation_shows_single_hash_and_success_tick(self):
+        self.assertTrue(self.order.order_number.startswith("#"))  #numbers are stored with the hash
+        self.client.force_login(self.profile.user)
+        html = self.client.get(reverse("checkout:confirmation", kwargs={"order_id": self.order.pk})).content.decode()
+        number = self.order.order_number.lstrip("#")
+        self.assertIn(f"#{number}</strong> has been confirmed", html)
+        self.assertNotIn("##", html)
+        self.assertIn('class="jm-confirm-icon', html)
+        self.assertIn('points="20 6 9 17 4 12"', html)  #the tick
+        invoice = self.client.get(self._invoice_url()).content.decode()
+        self.assertIn(f"#{number}", invoice)
+        self.assertNotIn(f"##{number}", invoice)
+
     def test_invoice_not_viewable_by_another_logged_in_customer(self):
         other = register_customer_email(email="idor-other@example.com", password="testpass12345", name="Other")
         self.client.force_login(other.user)

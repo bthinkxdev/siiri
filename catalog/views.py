@@ -24,6 +24,7 @@ from catalog.selectors import (
     get_search_suggestions,
     get_variant_price,
     record_product_view,
+    PLP_SORT_FIELDS,
 )
 from core.features import feature_required, is_enabled
 from core.services import get_site_settings
@@ -80,7 +81,9 @@ def plp_view(request: HttpRequest, collection_slug: str | None = None) -> HttpRe
     active_collection = collection
     search_query = filters.get("q", "")
 
-    sort = request.GET.get("sort", "newest")
+    sort = request.GET.get("sort", "").strip()
+    if sort not in PLP_SORT_FIELDS:
+        sort = ""
     page = int(request.GET.get("page", 1))
     plp_data = get_plp_products(filters=filters, sort=sort, page=page, user=request.user)
     filter_options = get_plp_filter_options()
