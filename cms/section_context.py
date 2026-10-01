@@ -12,7 +12,7 @@ from catalog.selectors import (
     get_recent_approved_reviews,
 )
 from cms.selectors import (
-    get_home_video,
+    get_home_videos,
     get_hero_slides,
     get_memory_photos,
     get_promo_banners,
@@ -135,7 +135,7 @@ def _memories(config: dict[str, Any]) -> dict[str, Any]:
 
 
 def _video_section(config: dict[str, Any]) -> dict[str, Any]:
-    return {"video": get_home_video()}
+    return {"videos": get_home_videos()}
 
 
 def _hero_slider(config: dict[str, Any]) -> dict[str, Any]:
@@ -206,8 +206,31 @@ def _reviews(config: dict[str, Any]) -> dict[str, Any]:
     return {"reviews": get_recent_approved_reviews(limit=limit)}
 
 
+def instagram_handle_from(value: str) -> str:
+    value = (value or "").strip()
+    if "instagram.com" in value:
+        value = value.split("instagram.com", 1)[1]
+    value = value.split("?", 1)[0].split("#", 1)[0].strip("/ ").split("/", 1)[0]
+    return value.lstrip("@")
+
+
+def resolve_instagram_section(config: dict[str, Any]) -> dict[str, Any]:
+
+    handle = instagram_handle_from(config.get("instagram_handle", ""))
+    if not handle:
+        from core.services import get_site_settings
+
+        handle = instagram_handle_from(getattr(get_site_settings(), "instagram_url", "") or "")
+    posts = [url for url in (config.get("post_urls") or config.get("images") or []) if isinstance(url, str) and url.strip()]
+    return {
+        "instagram_handle": handle,
+        "profile_url": f"https://www.instagram.com/{handle}/" if handle else "",
+        "posts": posts,
+    }
+
+
 def _instagram(config: dict[str, Any]) -> dict[str, Any]:
-    return {"images": config.get("images", [])}
+    return resolve_instagram_section(config)
 
 
 def _newsletter(config: dict[str, Any]) -> dict[str, Any]:

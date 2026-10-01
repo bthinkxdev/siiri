@@ -19,7 +19,7 @@ from cms.models import (
     Testimonial,
     validate_video_size,
 )
-from cms.selectors import get_home_video, get_testimonials
+from cms.selectors import get_home_video, get_home_videos, get_testimonials
 
 
 def _section(section_type: str, title: str = "", order: int = 1) -> None:
@@ -101,10 +101,23 @@ class HomeVideoSectionTests(TestCase):
         self.assertNotIn("hm-video", self.client.get("/").content.decode())
         self.assertIsNone(get_home_video())
 
-    def test_most_recent_active_video_wins(self) -> None:
+    def test_all_active_videos_render_in_display_order(self) -> None:
+        _section(HomepageSectionType.VIDEO_SECTION)
         HomeVideo.objects.create(title="Old", video="cms/video/old.mp4")
         HomeVideo.objects.create(title="New", video="cms/video/new.mp4")
-        self.assertEqual(get_home_video()["title"], "New")
+        HomeVideo.objects.create(title="Hidden", video="cms/video/off.mp4", is_active=False)
+        self.assertEqual([v["title"] for v in get_home_videos()], ["Old", "New"])
+        body = self.client.get("/").content.decode()
+        self.assertEqual(body.count('class="hm-video__player"'), 2)
+        self.assertLess(body.index("/media/cms/video/old.mp4"), body.index("/media/cms/video/new.mp4"))
+        self.assertNotIn("/media/cms/video/off.mp4", body)
+        self.assertEqual(body.count("js/autoplay-video.js"), 1)
+
+    def test_display_order_controls_sequence(self) -> None:
+        HomeVideo.objects.create(title="Second", video="cms/video/a.mp4", display_order=2)
+        HomeVideo.objects.create(title="First", video="cms/video/b.mp4", display_order=1)
+        self.assertEqual([v["title"] for v in get_home_videos()], ["First", "Second"])
+        self.assertEqual(get_home_video()["title"], "First")
 
     def test_size_validator(self) -> None:
         class Big:

@@ -217,6 +217,7 @@ class HomeVideoListView(DashboardListView):
     columns = [
         {"label": "Cover", "name": "poster", "type": "image"},
         {"label": "Title", "name": "title"},
+        {"label": "Order", "name": "display_order"},
         {"label": "Active", "name": "is_active", "type": "bool"},
     ]
 

@@ -350,7 +350,7 @@ class Testimonial(TimeStampedModel):
 
 
 class HomeVideo(TimeStampedModel):
-    """The homepage video section: one uploaded video with an editable heading."""
+    """A video in the homepage video section. Every active one is shown, in display order."""
 
     title = models.CharField(
         max_length=150,
@@ -379,10 +379,16 @@ class HomeVideo(TimeStampedModel):
         verbose_name="Cover image",
         help_text="Still image shown before the video plays (recommended).",
     )
+    display_order = models.PositiveIntegerField(
+        default=0,
+        db_index=True,
+        verbose_name="Display order",
+        help_text="Lower numbers are shown first. Videos with the same number show oldest first.",
+    )
     is_active = models.BooleanField(default=True, db_index=True, verbose_name="Is active")
 
     class Meta:
-        ordering = ["-updated_at", "-id"]
+        ordering = ["display_order", "id"]
         verbose_name = "Home video"
         verbose_name_plural = "Home videos"
 

@@ -110,11 +110,11 @@ class TestimonialAdmin(admin.ModelAdmin):
 
 @admin.register(HomeVideo)
 class HomeVideoAdmin(admin.ModelAdmin):
-    """The single homepage video (the most recently saved active one is shown)."""
+    """Homepage videos; every active one is shown, ordered by display_order."""
 
-    list_display = ("__str__", "is_active", "updated_at")
+    list_display = ("__str__", "display_order", "is_active", "updated_at")
     list_filter = ("is_active",)
-    fields = ("title", "subtitle", "video", "poster", "is_active")
+    fields = ("title", "subtitle", "video", "poster", "display_order", "is_active")
 
 
 @admin.register(MemoryPhoto)

@@ -211,7 +211,7 @@
             } else {
               Array.prototype.forEach.call(row.querySelectorAll("input, select, textarea"), function (inp) {
                 if (inp.type === "checkbox" || inp.type === "radio") inp.checked = false;
-                else if (inp.type !== "hidden") inp.value = "";
+                else if (inp.type !== "hidden" || inp.hasAttribute("data-pending-upload")) inp.value = "";
               });
             }
             row.style.display = "none";
@@ -234,6 +234,13 @@
         var inp = e.target;
         if (inp.type === "file" && inp.files && inp.files[0]) {
           var fileUrl = URL.createObjectURL(inp.files[0]);
+
+          var keptRow = inp.closest("tr");
+          if (keptRow) {
+            Array.prototype.forEach.call(keptRow.querySelectorAll("input[data-pending-upload]"), function (h) { h.value = ""; });
+            var note = keptRow.querySelector("[data-pending-note]");
+            if (note) note.remove();
+          }
 
           //update custom label if inside an existing file container
           var container = inp.closest("[data-existing-file-container]");
@@ -309,11 +316,83 @@
     });
   }
 
+  function initFilterButtons() {
+    var buttons = document.querySelectorAll("[data-filter-submit]");
+    Array.prototype.forEach.call(buttons, function (btn) {
+      var form = btn.form || btn.closest("form");
+      if (!form) return;
+
+      var fields = Array.prototype.filter.call(
+        form.querySelectorAll("select[name], input[name], textarea[name]"),
+        function (el) {
+          var t = (el.type || "").toLowerCase();
+          return ["hidden", "submit", "button", "reset", "image"].indexOf(t) === -1;
+        }
+      );
+
+      function initialValue(el) {
+        if (el.tagName === "SELECT") {
+          for (var i = 0; i < el.options.length; i++) {
+            if (el.options[i].defaultSelected) return el.options[i].value;
+          }
+          return el.options.length ? el.options[0].value : "";
+        }
+        if (el.type === "checkbox" || el.type === "radio") return el.defaultChecked;
+        return (el.defaultValue || "").trim();
+      }
+
+      function currentValue(el) {
+        if (el.type === "checkbox" || el.type === "radio") return el.checked;
+        return el.tagName === "SELECT" ? el.value : (el.value || "").trim();
+      }
+
+      function hasCriteria(el) {
+        if (el.type === "checkbox" || el.type === "radio") return el.checked;
+        return (el.value || "").trim() !== "";
+      }
+
+      function update() {
+        var active = fields.some(function (el) {
+          return hasCriteria(el) || currentValue(el) !== initialValue(el);
+        });
+        btn.disabled = !active;
+        btn.setAttribute("aria-disabled", active ? "false" : "true");
+      }
+
+      form.addEventListener("change", update);
+      form.addEventListener("input", update);
+      form.addEventListener("submit", function (e) {
+        if (e.submitter === btn && btn.disabled) e.preventDefault();
+      });
+      window.addEventListener("pageshow", update);
+      update();
+    });
+  }
+
+  function initDateRangeMins() {
+    var ends = document.querySelectorAll("input[data-min-from]");
+    Array.prototype.forEach.call(ends, function (end) {
+      var start = document.getElementById(end.getAttribute("data-min-from"));
+      if (!start) return;
+      var baseMin = end.getAttribute("min") || "";
+      function sync() {
+        // datetime-local values are fixed-width ISO strings, so string compare works.
+        var v = start.value || "";
+        end.min = v && v > baseMin ? v : baseMin;
+      }
+      start.addEventListener("change", sync);
+      start.addEventListener("input", sync);
+      sync();
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     initSidebar();
     initFormValidation();
     initCharts();
     initFormsets();
     initTableLabels();
+    initFilterButtons();
+    initDateRangeMins();
   });
 })();

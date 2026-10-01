@@ -170,8 +170,10 @@ def _render_product_form(request, product, mode):
         #meaningful standalone when no variant exists to drive them (see the
         #sync below, and ProductForm.clean() which otherwise silently defaults
         #a blank of any of these to 0).
-        has_surviving_variant = variants_valid and any(
-            vform.cleaned_data and not vform.cleaned_data.get("DELETE")
+        
+        has_surviving_variant = any(
+            vform.has_changed()
+            and vform.data.get(vform.add_prefix("DELETE")) not in ("on", "true", "True", "1")
             for vform in variants.forms
         )
         if form_valid and not has_surviving_variant:
@@ -219,8 +221,16 @@ def _render_product_form(request, product, mode):
                 )
                 return redirect("dashboard:product-list")
 
+            form.discard_used_pending_uploads()
+            for iform in images.forms:
+                iform.discard_used_pending_uploads()
             messages.success(request, f"Product '{product.name}' saved successfully.")
             return redirect("dashboard:product-list")
+
+        
+        form.stash_pending_uploads()
+        for iform in images.forms:
+            iform.stash_pending_uploads()
 
     else:
         form = forms.ProductForm(instance=product)
@@ -273,6 +283,11 @@ def _style(form):
             widget.attrs["class"] = (css + " form-control").strip()
         else:
             widget.attrs["class"] = (css + " form-control").strip()
+    if form.is_bound and form.errors:
+        for name in form.errors:
+            if name in form.fields:
+                widget = form.fields[name].widget
+                widget.attrs["class"] = (widget.attrs.get("class", "") + " is-invalid").strip()
 
 
 @dashboard_required

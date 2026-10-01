@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import datetime
+
 from django import forms
+
+from dashboard.pending_uploads import PendingUploadMixin
 from django.utils.text import slugify
 
 from accounts.models import CustomerProfile
@@ -42,7 +46,9 @@ class SlugAutoMixin(forms.ModelForm):
         return cleaned
 
 
-class ProductForm(SlugAutoMixin):
+class ProductForm(PendingUploadMixin, SlugAutoMixin):
+    pending_upload_fields = ("og_image",)
+
     class Meta:
         model = Product
         fields = [
@@ -100,8 +106,20 @@ class ProductForm(SlugAutoMixin):
         if not is_enabled("brands"):
             #field is hidden while Brands is OFF; dropping it keeps an existing brand intact on save
             self.fields.pop("brand", None)
+        from django.db.models import Q
         for field_name in ("collections", "styles", "fabrics", "occasions", "grades"):
-            self.fields[field_name].required = False
+            field = self.fields[field_name]
+            field.required = False
+           
+            active_q = Q(is_active=True)
+            if self.instance and self.instance.pk:
+                linked_ids = list(getattr(self.instance, field_name).values_list("pk", flat=True))
+                if linked_ids:
+                    active_q |= Q(pk__in=linked_ids)
+            field.queryset = field.queryset.filter(active_q)
+            field.label_from_instance = (
+                lambda obj: obj.name if obj.is_active else f"{obj.name} (inactive)"
+            )
         for field_name in ("description", "care_instructions"):
             self.fields[field_name].widget.attrs["class"] = "tinymce-editor"
             self.fields[field_name].widget.attrs["style"] = "visibility: hidden; height: 260px;"
@@ -118,6 +136,16 @@ class ProductForm(SlugAutoMixin):
         self.fields["purchase_price"].required = False
         self.fields["stock_quantity"].required = False
         self.fields["low_stock_threshold"].required = False
+
+        for name, label in (
+            ("base_price", "Base price"),
+            ("mrp", "MRP"),
+            ("purchase_price", "Purchase price"),
+            ("stock_quantity", "Stock quantity"),
+        ):
+            self.fields[name].widget.attrs["data-required-msg"] = (
+                f"{label} is required when the product has no variants."
+            )
 
     def clean(self):
         cleaned = super().clean()
@@ -228,6 +256,17 @@ class ProductVariantForm(forms.ModelForm):
             "low_stock_threshold": {"required": "Low stock threshold is required."},
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        for name, field in self.fields.items():
+            if field.required and name in self.Meta.error_messages:
+                field.widget.attrs["data-required-msg"] = self.Meta.error_messages[name]["required"]
+        if not self.instance.pk:
+            
+            for name in ("base_price", "mrp", "purchase_price"):
+                self.initial[name] = None
+
     def has_changed(self):
         """
         A row counts as "touched" if any field was submitted with a non-blank
@@ -312,7 +351,9 @@ ProductVariantFormSet = forms.inlineformset_factory(
     can_delete=True,
 )
 
-class ProductImageForm(forms.ModelForm):
+class ProductImageForm(PendingUploadMixin, forms.ModelForm):
+    pending_upload_fields = ("image",)
+
     class Meta:
         model = ProductImage
         fields = ["image", "alt_text", "display_order", "is_primary"]
@@ -375,7 +416,69 @@ class CustomerProfileForm(forms.ModelForm):
 
 
 
-class CouponForm(forms.ModelForm):
+
+class NoPastDatesMixin:
+    """Restricts datetime fields to today or later (Asia/Kolkata local day).
+
+    """
+
+    no_past_date_fields: tuple = ()
+    date_range_fields: tuple = ()
+    _MIN_FORMAT = "%Y-%m-%dT%H:%M"
+
+    @staticmethod
+    def _today_start():
+        from django.utils import timezone
+
+        return timezone.make_aware(
+            datetime.datetime.combine(timezone.localdate(), datetime.time.min)
+        )
+
+    def _original_value(self, name):
+        if self.instance and self.instance.pk:
+            return getattr(self.instance, name, None)
+        return None
+
+    def _setup_no_past_dates(self):
+        from django.utils import timezone
+
+        today_start = self._today_start()
+        for name in self.no_past_date_fields:
+            field = self.fields.get(name)
+            if not field:
+                continue
+            floor = today_start
+            original = self._original_value(name)
+            if original and original < today_start:
+                floor = original
+            field.widget.attrs["min"] = timezone.localtime(floor).strftime(self._MIN_FORMAT)
+        if len(self.date_range_fields) == 2:
+            start, end = self.date_range_fields
+            if start in self.fields and end in self.fields:
+                # dashboard.js keeps the end picker's min in step with the start value.
+                self.fields[end].widget.attrs["data-min-from"] = self[start].auto_id
+
+    def _clean_no_past_dates(self, cleaned_data):
+        today_start = self._today_start()
+        for name in self.no_past_date_fields:
+            value = cleaned_data.get(name)
+            if not value or value >= today_start:
+                continue
+            original = self._original_value(name)
+            unchanged = original is not None and original.replace(second=0, microsecond=0) == value.replace(
+                second=0, microsecond=0
+            )
+            if not unchanged:
+                self.add_error(name, "Past dates are not allowed. Please choose today or a future date.")
+        if len(self.date_range_fields) == 2:
+            start_name, end_name = self.date_range_fields
+            start, end = cleaned_data.get(start_name), cleaned_data.get(end_name)
+            if start and end and end <= start and end_name not in self.errors:
+                self.add_error(end_name, "End date must be after the start date.")
+        return cleaned_data
+
+
+class CouponForm(NoPastDatesMixin, forms.ModelForm):
     class Meta:
         model = Coupon
         fields = [
@@ -392,8 +495,12 @@ class CouponForm(forms.ModelForm):
         ]
         widgets = {"valid_from": _DATETIME, "valid_until": _DATETIME}
 
+    no_past_date_fields = ("valid_from", "valid_until")
+    date_range_fields = ("valid_from", "valid_until")
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._setup_no_past_dates()
         if self.instance and self.instance.pk:
             from django.utils import timezone
             now = timezone.now()
@@ -401,7 +508,7 @@ class CouponForm(forms.ModelForm):
                 self.initial["is_active"] = False
 
     def clean(self):
-        cleaned_data = super().clean()
+        cleaned_data = self._clean_no_past_dates(super().clean())
         valid_until = cleaned_data.get("valid_until")
         is_active = cleaned_data.get("is_active")
         
@@ -415,14 +522,18 @@ class CouponForm(forms.ModelForm):
 
 
 
-class FlashSaleForm(forms.ModelForm):
+class FlashSaleForm(NoPastDatesMixin, forms.ModelForm):
     class Meta:
         model = FlashSale
         fields = ["name", "products", "discount_percentage", "starts_at", "ends_at", "is_active"]
         widgets = {"starts_at": _DATETIME, "ends_at": _DATETIME}
 
+    no_past_date_fields = ("starts_at", "ends_at")
+    date_range_fields = ("starts_at", "ends_at")
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._setup_no_past_dates()
         if self.instance and self.instance.pk:
             from django.utils import timezone
             now = timezone.now()
@@ -430,7 +541,7 @@ class FlashSaleForm(forms.ModelForm):
                 self.initial["is_active"] = False
 
     def clean(self):
-        cleaned_data = super().clean()
+        cleaned_data = self._clean_no_past_dates(super().clean())
         ends_at = cleaned_data.get("ends_at")
         is_active = cleaned_data.get("is_active")
         
@@ -455,6 +566,25 @@ class HomepageSectionForm(forms.ModelForm):
     class Meta:
         model = HomepageSection
         fields = ["section_type", "title", "is_active", "config"]
+
+    def clean(self):
+        cleaned = super().clean()
+        from cms.models import HomepageSectionType
+
+        if cleaned.get("section_type") == HomepageSectionType.INSTAGRAM_GALLERY and cleaned.get("is_active"):
+            from cms.section_context import resolve_instagram_section
+
+            config = cleaned.get("config") if isinstance(cleaned.get("config"), dict) else {}
+            resolved = resolve_instagram_section(config)
+            if not resolved["instagram_handle"] and not resolved["posts"]:
+                self.add_error(
+                    "config",
+                    'The Instagram Gallery has nothing to show yet, so it would not appear on the home page. '
+                    'Add your handle here, e.g. {"instagram_handle": "siricouture"} '
+                    '(optionally with "post_urls": ["https://.../photo1.jpg", ...]), '
+                    "or set the Instagram URL in Site Settings.",
+                )
+        return cleaned
 
     def save(self, commit=True):
         instance = super().save(commit=False)
@@ -525,7 +655,15 @@ class MemoryPhotoForm(forms.ModelForm):
 class HomeVideoForm(forms.ModelForm):
     class Meta:
         model = HomeVideo
-        fields = ["title", "subtitle", "video", "poster", "is_active"]
+        fields = ["title", "subtitle", "video", "poster", "display_order", "is_active"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["display_order"].required = False
+
+    def clean_display_order(self):
+        value = self.cleaned_data.get("display_order")
+        return 0 if value is None else value
 
 
 class ServiceHighlightForm(forms.ModelForm):

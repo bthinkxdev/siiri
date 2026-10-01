@@ -1,9 +1,20 @@
 {% load i18n %}
-{% if section_context.instagram_handle %}
+{% if section_context.instagram_handle or section_context.posts %}
 <section class="container mb-5 instagram-follow-section">
   {% include "cms/sections/_section_title.html" with section_context=section_context fallback_key="Follow Us" %}
 
-  <a href="https://instagram.com/{{ section_context.instagram_handle }}"
+  {% if section_context.posts %}
+  <div class="instagram-grid mb-3">
+    {% for post in section_context.posts %}
+    {% if section_context.profile_url %}<a href="{{ section_context.profile_url }}" class="instagram-grid__item" target="_blank" rel="noopener noreferrer">{% else %}<div class="instagram-grid__item">{% endif %}
+      <img src="{{ post }}" alt="{% if section_context.instagram_handle %}@{{ section_context.instagram_handle }} {% endif %}{% trans 'Instagram post' %}" loading="lazy">
+    {% if section_context.profile_url %}</a>{% else %}</div>{% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if section_context.instagram_handle %}
+  <a href="{{ section_context.profile_url }}"
      class="instagram-follow-card"
      target="_blank"
      rel="noopener noreferrer">
@@ -19,5 +30,6 @@
       <span class="instagram-follow-handle">@{{ section_context.instagram_handle }}</span>
     </span>
   </a>
+  {% endif %}
 </section>
 {% endif %}

@@ -153,27 +153,33 @@ def get_testimonials(limit: int = 6) -> list[dict[str, Any]]:
     ]
 
 
-def get_home_video() -> dict[str, Any] | None:
+def get_home_videos() -> list[dict[str, Any]]:
     """
-    Return the homepage video (the most recently saved active one), or None.
+    Return every active homepage video, ordered by display_order then id (oldest first).
 
     Query guarantee: exactly 1 SELECT on cms_homevideo.
 
     Returns:
-        Dict with keys: title, subtitle, src, mime, poster (URL or "").
+        List of dicts with keys: title, subtitle, src, mime, poster (URL or "").
     """
     from cms.models import HomeVideo
 
-    video = HomeVideo.objects.filter(is_active=True).exclude(video="").first()
-    if video is None:
-        return None
-    return {
-        "title": video.title,
-        "subtitle": video.subtitle,
-        "src": video.video.url,
-        "mime": _video_mime(video.video.name),
-        "poster": video.poster.url if video.poster else "",
-    }
+    return [
+        {
+            "title": video.title,
+            "subtitle": video.subtitle,
+            "src": video.video.url,
+            "mime": _video_mime(video.video.name),
+            "poster": video.poster.url if video.poster else "",
+        }
+        for video in HomeVideo.objects.filter(is_active=True).exclude(video="").order_by("display_order", "id")
+    ]
+
+
+def get_home_video() -> dict[str, Any] | None:
+    """Return the first homepage video in display order, or None (kept for existing callers)."""
+    videos = get_home_videos()
+    return videos[0] if videos else None
 
 
 def get_memory_photos(limit: int = 12) -> list[dict[str, str]]:
