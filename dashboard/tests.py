@@ -558,3 +558,79 @@ class ProductImagesKeptAfterFailedSaveTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Product.objects.exists())
         self.assertIn("image", response.context["images"].forms[0].errors)
+
+
+class SkuUniqueAcrossProductsTests(TestCase):
+    """Product SKUs and variant SKUs share one namespace across the whole catalogue."""
+
+    def setUp(self) -> None:
+        from catalog.models import ProductVariant
+
+        self.client.force_login(User.objects.create_superuser("sku-admin", "sku@example.com", "testpass12345"))
+        self.simple = Product.objects.create(name="Simple Saree", slug="simple-saree", sku="SIMPLE-1", base_price=100, mrp=120, purchase_price=50)
+        self.parent = Product.objects.create(name="Variant Saree", slug="variant-saree", sku="PARENT-1", base_price=100, mrp=120, purchase_price=50)
+        self.variant = ProductVariant.objects.create(
+            product=self.parent, variant_type="Size", name="Large", sku_suffix="VAR-L",
+            base_price=100, mrp=120, purchase_price=50, stock_quantity=3,
+        )
+
+    def _post(self, url, *, sku, variants=(), extra=None):
+        data = {"name": "New Saree", "sku": sku, "base_price": "100", "mrp": "120", "purchase_price": "60",
+                "stock_quantity": "1", "low_stock_threshold": "1"}
+        for prefix in ("images", "specifications"):
+            data.update({f"{prefix}-TOTAL_FORMS": "0", f"{prefix}-INITIAL_FORMS": "0",
+                         f"{prefix}-MIN_NUM_FORMS": "0", f"{prefix}-MAX_NUM_FORMS": "1000"})
+        data.update({"variants-TOTAL_FORMS": str(len(variants)), "variants-INITIAL_FORMS": "0",
+                     "variants-MIN_NUM_FORMS": "0", "variants-MAX_NUM_FORMS": "1000"})
+        for i, suffix in enumerate(variants):
+            data.update({f"variants-{i}-variant_type": "Size", f"variants-{i}-name": f"V{i}",
+                         f"variants-{i}-base_price": "100", f"variants-{i}-mrp": "120",
+                         f"variants-{i}-purchase_price": "60", f"variants-{i}-sku_suffix": suffix,
+                         f"variants-{i}-stock_quantity": "1", f"variants-{i}-low_stock_threshold": "1"})
+        data.update(extra or {})
+        return self.client.post(url, data)
+
+    def _create(self, **kw):
+        return self._post(reverse("dashboard:product-create"), **kw)
+
+    def test_variant_sku_reused_by_another_products_variant_is_rejected(self) -> None:
+        response = self._create(sku="NEW-1", variants=["var-l"])
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Product.objects.filter(sku="NEW-1").exists())
+        errors = response.context["variants"].forms[0].errors["sku_suffix"]
+        self.assertIn('already used by variant "Large" of product "Variant Saree"', errors[0])
+        self.assertIn('already used by variant &quot;Large&quot;', response.content.decode())
+
+    def test_variant_sku_matching_a_simple_product_sku_is_rejected(self) -> None:
+        response = self._create(sku="NEW-1", variants=["SIMPLE-1"])
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('already used by product "Simple Saree"', response.context["variants"].forms[0].errors["sku_suffix"][0])
+
+    def test_simple_product_sku_matching_a_variant_sku_is_rejected(self) -> None:
+        response = self._create(sku="Var-L")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('already used by variant "Large" of product "Variant Saree"', response.context["form"].errors["sku"][0])
+
+    def test_product_sku_is_case_insensitive_unique(self) -> None:
+        response = self._create(sku="simple-1")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('already used by product "Simple Saree"', response.context["form"].errors["sku"][0])
+
+    def test_unique_skus_save(self) -> None:
+        response = self._create(sku="NEW-1", variants=["NEW-1-S", "NEW-1-M"])
+        self.assertRedirects(response, reverse("dashboard:product-list"))
+
+    def test_variant_may_reuse_its_own_parent_sku(self) -> None:
+        response = self._create(sku="NEW-1", variants=["NEW-1"])
+        self.assertRedirects(response, reverse("dashboard:product-list"))
+
+    def test_existing_legacy_duplicate_does_not_block_editing(self) -> None:
+        from catalog.models import ProductVariant
+
+        ProductVariant.objects.create(
+            product=self.parent, variant_type="Size", name="Small", sku_suffix="SIMPLE-1",
+            base_price=100, mrp=120, purchase_price=50, stock_quantity=3,
+        )
+        response = self._post(reverse("dashboard:product-update", args=[self.simple.pk]), sku="SIMPLE-1",
+                              extra={"name": "Simple Saree (renamed)"})
+        self.assertRedirects(response, reverse("dashboard:product-list"))

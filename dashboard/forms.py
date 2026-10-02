@@ -46,6 +46,32 @@ class SlugAutoMixin(forms.ModelForm):
         return cleaned
 
 
+def find_sku_conflict(sku: str, *, exclude_product_id=None, exclude_variant_id=None) -> str | None:
+    """
+    Describe where ``sku`` is already used in the catalogue (case-insensitive), or None.
+
+    """
+    sku = (sku or "").strip()
+    if not sku:
+        return None
+    products = Product.objects.filter(sku__iexact=sku)
+    if exclude_product_id:
+        products = products.exclude(pk=exclude_product_id)
+    product = products.only("name", "sku").first()
+    if product:
+        return f'SKU "{sku}" is already used by product "{product.name}".'
+    variants = ProductVariant.objects.filter(sku_suffix__iexact=sku).select_related("product")
+    if exclude_product_id:
+        # the same product's own variants are checked by the variant formset
+        variants = variants.exclude(product_id=exclude_product_id)
+    if exclude_variant_id:
+        variants = variants.exclude(pk=exclude_variant_id)
+    variant = variants.only("name", "product__name").first()
+    if variant:
+        return f'SKU "{sku}" is already used by variant "{variant.name}" of product "{variant.product.name}".'
+    return None
+
+
 class ProductForm(PendingUploadMixin, SlugAutoMixin):
     pending_upload_fields = ("og_image",)
 
@@ -146,6 +172,14 @@ class ProductForm(PendingUploadMixin, SlugAutoMixin):
             self.fields[name].widget.attrs["data-required-msg"] = (
                 f"{label} is required when the product has no variants."
             )
+
+    def clean_sku(self):
+        sku = (self.cleaned_data.get("sku") or "").strip()
+        if sku and (not self.instance.pk or sku.lower() != (self.instance.sku or "").strip().lower()):
+            conflict = find_sku_conflict(sku, exclude_product_id=self.instance.pk)
+            if conflict:
+                raise forms.ValidationError(conflict)
+        return sku
 
     def clean(self):
         cleaned = super().clean()
@@ -336,6 +370,16 @@ class ProductVariantInlineFormSet(forms.BaseInlineFormSet):
                     ).exclude(pk=form.instance.pk).first()
                     if conflict:
                         form.add_error("sku_suffix", f'SKU suffix "{sku_suffix}" is already used by another variant of this product.')
+                    else:
+                        previous = (form.initial.get("sku_suffix") or "").strip().lower() if form.instance.pk else None
+                        if previous != key:
+                            message = find_sku_conflict(
+                                sku_suffix,
+                                exclude_product_id=self.instance.pk,
+                                exclude_variant_id=form.instance.pk,
+                            )
+                            if message:
+                                form.add_error("sku_suffix", message)
 
             if form.cleaned_data.get("is_default"):
                 default_count += 1
