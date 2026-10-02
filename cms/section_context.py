@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from catalog.selectors import (
-    get_active_collections,
+    get_homepage_collections,
     get_featured_brands,
     get_homepage_product_rails,
     get_products_for_section_config,
@@ -167,7 +167,7 @@ def _shop_by_recipient(config: dict[str, Any]) -> dict[str, Any]:
 
 
 def _shop_by_collection(config: dict[str, Any]) -> dict[str, Any]:
-    return {"collections": get_active_collections()}
+    return {"collections": get_homepage_collections()}
 
 
 def _featured(

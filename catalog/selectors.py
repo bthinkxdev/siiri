@@ -542,8 +542,15 @@ def get_recently_viewed(
 
 
 def get_active_collections() -> list:
-    """Return active collections ordered for navigation/homepage rails."""
+    """Return active collections ordered for navigation (header "Shop By" menu)."""
     return list(Collection.objects.filter(is_active=True).order_by("display_order", "name"))
+
+
+def get_homepage_collections() -> list:
+    """Active collections with "Show on homepage" on, for the homepage "Shop by collection" circles."""
+    return list(
+        Collection.objects.filter(is_active=True, show_on_homepage=True).order_by("display_order", "name")
+    )
 
 
 def get_shop_by_facets() -> dict[str, list]:

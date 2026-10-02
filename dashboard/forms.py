@@ -191,6 +191,12 @@ class ProductForm(PendingUploadMixin, SlugAutoMixin):
 
 class CollectionForm(SlugAutoMixin):
     class Meta:
+        help_texts = {
+            "show_on_homepage": (
+                "When on, this collection appears in the home page \"Shop by collection\" circles and the "
+                "collection product rows. It always stays in the Shop menu and on its own page while active."
+            ),
+        }
         model = Collection
         fields = [
             "name",

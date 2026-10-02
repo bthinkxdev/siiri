@@ -1,7 +1,12 @@
 {% load i18n %}
 {% if section_context.instagram_handle or section_context.posts %}
 <section class="container mb-5 instagram-follow-section">
-  {% include "cms/sections/_section_title.html" with section_context=section_context fallback_key="Follow Us" %}
+  {% trans "Visit Instagram" as visit_label %}
+  {% if section_context.profile_url %}
+  {% include "cms/sections/_section_title.html" with section_context=section_context fallback_key="Follow Us" cta_url=section_context.profile_url cta_label=visit_label cta_external=True %}
+  {% else %}
+  {% include "cms/sections/_section_title.html" with section_context=section_context fallback_key="Follow Us" show_cta=False %}
+  {% endif %}
 
   {% if section_context.posts %}
   <div class="instagram-grid mb-3">

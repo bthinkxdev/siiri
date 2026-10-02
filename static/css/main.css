@@ -6848,18 +6848,61 @@ body.jm-body .hm-hero__title {
   background: var(--jm-white);
 }
 
+
 .hm-circles__row {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   margin: 0;
   padding: 0;
   list-style: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none; 
+  -webkit-overflow-scrolling: touch;
+}
+
+.hm-circles__row::-webkit-scrollbar {
+  display: none;
+}
+
+.hm-circles__stage {
+  position: relative;
+}
+
+.hm-circles .hm-mem__arrow {
+  top: calc(50% - 0.9rem);
+  background: #fff;
+  border: 1px solid var(--jm-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.hm-circles .hm-mem__arrow--prev {
+  left: 4px;
+}
+
+.hm-circles .hm-mem__arrow--next {
+  right: 4px;
+}
+
+.hm-circles:not(.is-scrollable) .hm-mem__arrow {
+  display: none;
 }
 
 .hm-circles__slot {
   flex: 0 0 12.5%;
   min-width: 0;
   padding-inline: 0.25%;
+  scroll-snap-align: start;
+}
+
+.hm-circles__slot:first-child {
+  margin-inline-start: auto;
+}
+
+.hm-circles__slot:last-child {
+  margin-inline-end: auto;
 }
 
 .hm-circle {

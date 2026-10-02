@@ -1,8 +1,11 @@
 {% load i18n static %}
 {% if section_context.collections %}
-<section class="hm-circles" id="jm-collections" aria-label="{% trans 'Shop by collection' %}">
-  <div class="hm-wrap">
-    <ul class="hm-circles__row" role="list">
+<section class="hm-circles" id="jm-collections" data-circles aria-label="{% trans 'Shop by collection' %}">
+  <div class="hm-wrap hm-circles__stage">
+    <button type="button" class="hm-mem__arrow hm-mem__arrow--prev" data-circles-prev aria-label="{% trans 'Previous collections' %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <ul class="hm-circles__row" role="list" data-circles-track>
       {% for collection in section_context.collections %}
       <li class="hm-circles__slot">
         <a href="{% url 'catalog:plp-collection' collection_slug=collection.slug %}" class="hm-circle">
@@ -15,6 +18,10 @@
       </li>
       {% endfor %}
     </ul>
+    <button type="button" class="hm-mem__arrow hm-mem__arrow--next" data-circles-next aria-label="{% trans 'Next collections' %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
   </div>
+  <script src="{% static 'js/collection-circles.js' %}" defer></script>
 </section>
 {% endif %}
