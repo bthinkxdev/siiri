@@ -427,6 +427,43 @@ class MemoryPhoto(TimeStampedModel):
         return self.caption or f"Memory photo #{self.pk}"
 
 
+class MarketingFeatureCard(TimeStampedModel):
+    """A card in the homepage "Marketing Feature Cards" section (image + title linking somewhere)."""
+
+    title = models.CharField(
+        max_length=120,
+        verbose_name="Title",
+        help_text="Short text shown on the card (e.g. Bridal Sarees).",
+    )
+    image = models.ImageField(
+        upload_to="cms/feature_cards/",
+        verbose_name="Image",
+        help_text="Landscape image works best (about 5:3, at least 600px wide).",
+    )
+    link_url = models.CharField(
+        max_length=300,
+        blank=True,
+        validators=[validate_link_target],
+        verbose_name="Link",
+        help_text="Where the card goes when clicked: a site path like /shop/ or a full https:// URL. Optional.",
+    )
+    display_order = models.PositiveIntegerField(
+        default=0, db_index=True, verbose_name="Display order"
+    )
+    is_active = models.BooleanField(default=True, db_index=True, verbose_name="Is active")
+
+    class Meta:
+        ordering = ["display_order", "id"]
+        verbose_name = "Marketing feature card"
+        verbose_name_plural = "Marketing feature cards"
+        indexes = [
+            models.Index(fields=["is_active", "display_order"], name="cms_featcard_active_order_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return self.title or f"Feature card #{self.pk}"
+
+
 class BlogPost(TimeStampedModel, SEOModel, PublishableModel):
     """CMS blog article."""
 

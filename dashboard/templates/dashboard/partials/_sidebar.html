@@ -160,6 +160,12 @@
       </a>
     </li>
     <li>
+      <a class="nav-link {% if nav_section == 'featurecards' %}active{% endif %}"
+        href="{% url 'dashboard:marketingfeaturecard-list' %}">
+        <i class="ti ti-cards"></i><span class="nav-text">Feature Cards</span>
+      </a>
+    </li>
+    <li>
       <a class="nav-link {% if nav_section == 'blog' %}active{% endif %}" href="{% url 'dashboard:blogpost-list' %}">
         <i class="ti ti-article"></i><span class="nav-text">Blog</span>
       </a>

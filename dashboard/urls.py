@@ -180,6 +180,13 @@ urlpatterns += _crud(
     cms.MemoryPhotoDeleteView,
 )
 urlpatterns += _crud(
+    "marketingfeaturecard",
+    cms.MarketingFeatureCardListView,
+    cms.MarketingFeatureCardCreateView,
+    cms.MarketingFeatureCardUpdateView,
+    cms.MarketingFeatureCardDeleteView,
+)
+urlpatterns += _crud(
     "homevideo",
     cms.HomeVideoListView,
     cms.HomeVideoCreateView,

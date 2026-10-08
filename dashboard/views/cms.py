@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST
 
 from dashboard.access import dashboard_required
 
-from cms.models import BlogPost, FAQItem, HeroSlide, HomepageSection, Page, PolicyDocument, PromoBanner, ServiceHighlight, Testimonial, HomeVideo, MemoryPhoto
+from cms.models import BlogPost, FAQItem, HeroSlide, HomepageSection, Page, PolicyDocument, PromoBanner, ServiceHighlight, Testimonial, HomeVideo, MemoryPhoto, MarketingFeatureCard
 from dashboard import forms
 from dashboard.views.base import (
     DashboardCreateView,
@@ -206,6 +206,44 @@ class MemoryPhotoDeleteView(DashboardDeleteView):
     nav_section = "memories"
     url_basename = "memoryphoto"
     singular_name = "Memory Photo"
+
+
+class MarketingFeatureCardListView(DashboardListView):
+    model = MarketingFeatureCard
+    nav_section = "featurecards"
+    url_basename = "marketingfeaturecard"
+    singular_name = "Feature Card"
+    plural_name = "Feature Cards"
+    columns = [
+        {"label": "Image", "name": "image", "type": "image"},
+        {"label": "Title", "name": "title"},
+        {"label": "Link", "name": "link_url"},
+        {"label": "Order", "name": "display_order"},
+        {"label": "Active", "name": "is_active", "type": "bool"},
+    ]
+
+
+class MarketingFeatureCardCreateView(DashboardCreateView):
+    model = MarketingFeatureCard
+    form_class = forms.MarketingFeatureCardForm
+    nav_section = "featurecards"
+    url_basename = "marketingfeaturecard"
+    singular_name = "Feature Card"
+
+
+class MarketingFeatureCardUpdateView(DashboardUpdateView):
+    model = MarketingFeatureCard
+    form_class = forms.MarketingFeatureCardForm
+    nav_section = "featurecards"
+    url_basename = "marketingfeaturecard"
+    singular_name = "Feature Card"
+
+
+class MarketingFeatureCardDeleteView(DashboardDeleteView):
+    model = MarketingFeatureCard
+    nav_section = "featurecards"
+    url_basename = "marketingfeaturecard"
+    singular_name = "Feature Card"
 
 
 class HomeVideoListView(DashboardListView):

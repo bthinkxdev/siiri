@@ -24,7 +24,7 @@ from catalog.models import (
     SizeChart,
     Style,
 )
-from cms.models import BlogPost, FAQItem, HeroSlide, HomepageSection, Page, PolicyDocument, PromoBanner, ServiceHighlight, Testimonial, HomeVideo, MemoryPhoto
+from cms.models import BlogPost, FAQItem, HeroSlide, HomepageSection, Page, PolicyDocument, PromoBanner, ServiceHighlight, Testimonial, HomeVideo, MemoryPhoto, MarketingFeatureCard
 from core.models import SiteSettings, Currency
 
 from marketing.models import Coupon, FlashSale, NewsletterSubscriber
@@ -698,6 +698,24 @@ class MemoryPhotoForm(forms.ModelForm):
             if width and width < 600:
                 raise forms.ValidationError(
                     f"Photo must be at least 600px wide for good quality. Uploaded photo is {width}px wide."
+                )
+        return image
+
+
+class MarketingFeatureCardForm(forms.ModelForm):
+    class Meta:
+        model = MarketingFeatureCard
+        fields = ["title", "image", "link_url", "display_order", "is_active"]
+
+    def clean_image(self):
+        image = self.cleaned_data.get("image")
+        if image and hasattr(image, "content_type"):
+            from django.core.files.images import get_image_dimensions
+
+            width, _height = get_image_dimensions(image)
+            if width and width < 600:
+                raise forms.ValidationError(
+                    f"Image must be at least 600px wide for good quality. Uploaded image is {width}px wide."
                 )
         return image
 

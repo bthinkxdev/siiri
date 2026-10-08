@@ -17,6 +17,7 @@ from cms.models import (
     Testimonial,
     HomeVideo,
     MemoryPhoto,
+    MarketingFeatureCard,
 )
 
 
@@ -126,6 +127,17 @@ class MemoryPhotoAdmin(admin.ModelAdmin):
     list_editable = ("display_order", "is_active")
     ordering = ("display_order", "id")
     fields = ("image", "caption", "display_order", "is_active")
+
+
+@admin.register(MarketingFeatureCard)
+class MarketingFeatureCardAdmin(admin.ModelAdmin):
+    """Homepage marketing feature cards; ordering via list_editable display_order."""
+
+    list_display = ("__str__", "link_url", "display_order", "is_active", "updated_at")
+    list_filter = ("is_active",)
+    list_editable = ("display_order", "is_active")
+    ordering = ("display_order", "id")
+    fields = ("title", "image", "link_url", "display_order", "is_active")
 
 
 @admin.register(BlogPost)

@@ -197,3 +197,15 @@ def get_memory_photos(limit: int = 12) -> list[dict[str, str]]:
         {"image": photo.image.url, "caption": photo.caption}
         for photo in MemoryPhoto.objects.filter(is_active=True).exclude(image="").order_by("display_order", "id")[:limit]
     ]
+
+
+def get_marketing_feature_cards(limit: int = 12) -> list[dict[str, str]]:
+
+    from cms.models import MarketingFeatureCard
+
+    return [
+        {"title": card.title, "url": card.link_url, "image": card.image.url}
+        for card in MarketingFeatureCard.objects.filter(is_active=True)
+        .exclude(image="")
+        .order_by("display_order", "id")[:limit]
+    ]

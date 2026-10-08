@@ -13,6 +13,7 @@ from catalog.selectors import (
 )
 from cms.selectors import (
     get_home_videos,
+    get_marketing_feature_cards,
     get_hero_slides,
     get_memory_photos,
     get_promo_banners,
@@ -198,7 +199,7 @@ def _banner(config: dict[str, Any]) -> dict[str, Any]:
 
 
 def _marketing_features(config: dict[str, Any]) -> dict[str, Any]:
-    return {"cards": config.get("cards", [])}
+    return {"cards": get_marketing_feature_cards() or config.get("cards", [])}
 
 
 def _reviews(config: dict[str, Any]) -> dict[str, Any]:
