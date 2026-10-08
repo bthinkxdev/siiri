@@ -1699,3 +1699,44 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 })();
+
+(function () {
+  'use strict';
+
+  var BOTTOM_GAP = 16;   
+  var MIN_HEIGHT = 240;  
+
+  function init() {
+    var aside = document.querySelector('.plp-filters-desktop');
+    if (!aside) return;
+    aside.classList.add('is-viewport-fitted');
+    var ticking = false;
+
+    function fit() {
+      ticking = false;
+      if (getComputedStyle(aside).display === 'none') return; 
+      var top = Math.max(aside.getBoundingClientRect().top, 0);
+      var available = Math.max(window.innerHeight - top - BOTTOM_GAP, MIN_HEIGHT);
+      aside.style.maxHeight = Math.floor(available) + 'px';
+    }
+
+    function schedule() {
+      if (!ticking) {
+        ticking = true;
+        window.requestAnimationFrame(fit);
+      }
+    }
+
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    window.addEventListener('load', schedule);
+    aside.addEventListener('transitionend', schedule); 
+    fit();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
