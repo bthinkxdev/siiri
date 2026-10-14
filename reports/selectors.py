@@ -120,19 +120,103 @@ def get_live_today_sales_report() -> DailySalesReport:
     )
 
 
+def _customer_orders():
+    """Real (revenue-status) orders placed by a known customer. Guest orders have no profile to track."""
+    return Order.objects.filter(
+        order_status__in=REVENUE_ORDER_STATUSES, customer_profile__isnull=False
+    )
+
+
+def get_customer_report_rows(*, start_date: date, end_date: date) -> list[DailyCustomerReport]:
+    """
+    Per-day new vs returning buyers, computed live from order history (newest day first).
+
+    """
+    from bisect import bisect_right
+    from django.db.models.functions import TruncDate
+
+    # Orders per customer before the range (one aggregate query).
+    running: dict[int, int] = {
+        row["customer_profile"]: row["n"]
+        for row in _customer_orders()
+        .filter(created_at__date__lt=start_date)
+        .values("customer_profile")
+        .annotate(n=Count("id"))
+    }
+
+    # Orders inside the range, grouped per day and customer.
+    per_day: dict[date, dict[int, int]] = {}
+    for row in (
+        _customer_orders()
+        .filter(created_at__date__gte=start_date, created_at__date__lte=end_date)
+        .annotate(day=TruncDate("created_at"))
+        .values("day", "customer_profile")
+        .annotate(n=Count("id"))
+        .order_by("day")
+    ):
+        per_day.setdefault(row["day"], {})[row["customer_profile"]] = row["n"]
+
+    signup_days = sorted(
+        CustomerProfile.objects.filter(created_at__date__lte=end_date)
+        .annotate(day=TruncDate("created_at"))
+        .values_list("day", flat=True)
+    )
+    signups_in_range = {d for d in signup_days if d >= start_date}
+
+    rows: list[DailyCustomerReport] = []
+    day = start_date
+    while day <= end_date:
+        buyers = per_day.get(day, {})
+        new = returning = 0
+        for profile_id, n in buyers.items():
+            running[profile_id] = running.get(profile_id, 0) + n
+            if running[profile_id] > 1:
+                returning += 1
+            else:
+                new += 1
+        if buyers or day in signups_in_range:
+            rows.append(
+                DailyCustomerReport(
+                    report_date=day,
+                    new_customers=new,
+                    returning_customers=returning,
+                    total_active_customers=bisect_right(signup_days, day),
+                )
+            )
+        day += timedelta(days=1)
+    rows.reverse()
+    return rows
+
+
+def get_customer_split_counts(*, since: date) -> dict[str, int]:
+    """
+    New vs returning among customers who placed a real order on/after ``since``.
+
+    """
+    from django.db.models import Max
+
+    buyers = (
+        _customer_orders()
+        .values("customer_profile")
+        .annotate(n=Count("id"), last_day=Max("created_at"))
+        .filter(last_day__date__gte=since)
+    )
+    returning = buyers.filter(n__gt=1).count()
+    total = buyers.count()
+    return {"new": total - returning, "returning": returning}
+
+
 def get_live_today_customer_report() -> DailyCustomerReport:
     """Compute today's customer report on the fly."""
     today = timezone.localdate()
-    new_customers = CustomerProfile.objects.filter(created_at__date=today).count()
-    returning = Order.objects.filter(
-        created_at__date=today, order_status__in=REVENUE_ORDER_STATUSES
-    ).values("customer_profile").distinct().count()
-    
+    rows = get_customer_report_rows(start_date=today, end_date=today)
+    if rows:
+        return rows[0]
     return DailyCustomerReport(
         report_date=today,
-        new_customers=new_customers,
-        returning_customers=max(returning - new_customers, 0),
-        total_active_customers=CustomerProfile.objects.count()
+        new_customers=0,
+        returning_customers=0,
+        total_active_customers=CustomerProfile.objects.count(),
     )
 
 

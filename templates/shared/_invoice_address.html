@@ -1,0 +1,35 @@
+{# Invoice address card. Params: title (e.g. "Bill To"), order. #}
+{# No separate billing address is collected at checkout, so Bill To and Ship To both use the delivery address snapshot. #}
+{% with addr=order.delivery_address_snapshot %}
+<div class="ship-to">
+    <div class="section-title">{{ title }}</div>
+    <div class="customer-details">
+        <div class="customer-name">
+            {% if addr.name %}
+                {{ addr.name }}
+            {% elif order.customer_profile and order.customer_profile.user.get_full_name %}
+                {{ order.customer_profile.user.get_full_name }}
+            {% else %}
+                Guest Customer
+            {% endif %}
+        </div>
+        {% if addr.line1 %}<div>{{ addr.line1 }}</div>{% endif %}
+        {% if addr.line2 %}<div>{{ addr.line2 }}</div>{% endif %}
+        {% if addr.city or addr.state or addr.pincode %}
+            <div>{{ addr.city }}{% if addr.city and addr.state %}, {% endif %}{{ addr.state }} {{ addr.pincode }}</div>
+        {% endif %}
+
+        {% if addr.email %}
+            <div>{{ addr.email }}</div>
+        {% elif order.customer_profile %}
+            <div>{{ order.customer_profile.user.email }}</div>
+        {% endif %}
+
+        {% if addr.phone %}
+            <div>{{ addr.phone }}</div>
+        {% elif order.customer_profile and order.customer_profile.get_phone %}
+            <div>{{ order.customer_profile.get_phone }}</div>
+        {% endif %}
+    </div>
+</div>
+{% endwith %}

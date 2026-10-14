@@ -414,6 +414,21 @@
           input.focus({ preventScroll: true });
         });
       }
+
+      if (input.form) {
+        input.form.addEventListener('submit', function (event) {
+          var query = input.value.trim();
+          if (!query) {
+            event.preventDefault();
+            input.value = '';
+            if (results) results.innerHTML = '';
+            syncClearButton();
+            input.focus({ preventScroll: true });
+            return;
+          }
+          input.value = query;
+        });
+      }
       document.body.addEventListener('htmx:afterSwap', function (event) {
         if (event.detail.target && event.detail.target.id === 'mobile-search-results') {
           syncClearButton();
@@ -1032,6 +1047,7 @@ document.addEventListener('DOMContentLoaded', () => {
         section.querySelectorAll('[data-spotlight-variant-input]').forEach(function (input) {
           input.value = variantId;
         });
+        if (window.jmSyncSpotlightCartState) window.jmSyncSpotlightCartState();
 
         var variantsData = [];
         try {
@@ -1292,7 +1308,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
 
           var label = document.createElement('label');
-          label.className = 'd-block position-relative border rounded-3 p-2 cursor-pointer';
+          label.className = 'jm-atc-variant d-block position-relative border rounded-3 p-2 cursor-pointer';
           label.style.minWidth = '100px';
           label.setAttribute('for', inputId);
           if (isOutVariant) {
@@ -1338,14 +1354,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (discount) {
               discount.classList.add('d-none');
             }
-            
-            variantsGroup.querySelectorAll('label').forEach(l => {
-              l.classList.remove('border-primary');
-              l.style.borderWidth = '1px';
-            });
-            label.classList.add('border-primary');
-            label.style.borderWidth = '2px';
-            
+
+
             updateAtcState(productId ? productId.value : '', this.value, null);
           });
 
@@ -1436,29 +1446,30 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.jm-product-card[data-product-id="' + productId + '"]').forEach(function (card) {
       var fullyInCart = isCardFullyInCart(card, inCart);
       card.dataset.inCart = fullyInCart ? 'true' : 'false';
-      var form = card.querySelector('.jm-product-card__cart');
+      //The add button and the in-cart tick share one absolutely-positioned slot
+      //(.jm-product-card__cart), so swapping them never changes the card's layout.
+      var slot = card.querySelector('.jm-product-card__cart');
+      if (!slot) return;
+      var addBtn = slot.querySelector('[data-jm-add-to-cart]');
       var viewCartLink = card.querySelector('.jm-dynamic-view-cart');
 
       if (fullyInCart) {
-        if (form && !form.classList.contains('d-none')) {
-          var newLink = document.createElement('a');
+        if (!viewCartLink) {
           var cartUrl = '/cart/';
           var existingLink = document.querySelector('a[href*="/cart/"]');
           if (existingLink) cartUrl = existingLink.getAttribute('href');
-
-          newLink.href = cartUrl;
-          newLink.className = 'jm-product-card__atc jm-product-card__atc--in-cart jm-dynamic-view-cart';
-          newLink.setAttribute('aria-label', 'View Cart');
-          newLink.setAttribute('title', 'View Cart');
-          newLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
-
-          form.classList.add('d-none');
-          if (viewCartLink) viewCartLink.replaceWith(newLink);
-          else form.parentNode.insertBefore(newLink, form.nextSibling);
+          viewCartLink = document.createElement('a');
+          viewCartLink.href = cartUrl;
+          viewCartLink.className = 'jm-product-card__atc jm-product-card__atc--in-cart jm-dynamic-view-cart';
+          viewCartLink.setAttribute('aria-label', 'View Cart');
+          viewCartLink.setAttribute('title', 'View Cart');
+          viewCartLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>';
         }
+        if (viewCartLink.parentNode !== slot) slot.appendChild(viewCartLink);
+        if (addBtn) addBtn.classList.add('d-none');
       } else {
         if (viewCartLink) viewCartLink.remove();
-        if (form) form.classList.remove('d-none');
+        if (addBtn) addBtn.classList.remove('d-none');
       }
     });
 
@@ -1496,6 +1507,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       window.jmCartItemKeys.add(vid ? (pid + '_' + vid) : pid);
       setProductCardCartState(pid, true);
+      if (window.jmSyncSpotlightCartState) window.jmSyncSpotlightCartState();
     }
     lastSync = 0;
     syncCartStatus();
@@ -1509,6 +1521,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.jmCartItemKeys.delete(vid ? (pid + '_' + vid) : pid);
       }
       setProductCardCartState(pid, false);
+      if (window.jmSyncSpotlightCartState) window.jmSyncSpotlightCartState();
     }
     lastSync = 0;
     syncCartStatus();
@@ -1568,6 +1581,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (stickyView) stickyView.classList.toggle('d-none', !inPdp);
           }
         }
+
+        if (window.jmSyncSpotlightCartState) window.jmSyncSpotlightCartState();
       }).catch(function () { });
   }
 
@@ -1661,4 +1676,67 @@ document.addEventListener('DOMContentLoaded', () => {
       history.replaceState(null, '', '#' + id);
     }
   });
+})();
+
+
+(function () {
+  'use strict';
+
+  window.jmSyncSpotlightCartState = function () {
+    if (!window.jmCartItemKeys) return; // no client-side cart state yet: keep server-rendered state
+    document.querySelectorAll('.jm-spotlight').forEach(function (section) {
+      var addGrp = section.querySelector('[data-spotlight-add-group]');
+      var viewGrp = section.querySelector('[data-spotlight-view-group]');
+      if (!addGrp || !viewGrp) return;
+      var form = addGrp.querySelector('form');
+      if (!form) return;
+      var pid = (form.querySelector('input[name="product_id"]') || {}).value;
+      var vid = (form.querySelector('input[name="variant_id"]') || {}).value;
+      if (!pid) return;
+      var inCart = window.jmCartItemKeys.has(vid ? (pid + '_' + vid) : String(pid));
+      addGrp.classList.toggle('d-none', inCart);
+      viewGrp.classList.toggle('d-none', !inCart);
+    });
+  };
+})();
+
+(function () {
+  'use strict';
+
+  var BOTTOM_GAP = 16;   
+  var MIN_HEIGHT = 240;  
+
+  function init() {
+    var aside = document.querySelector('.plp-filters-desktop');
+    if (!aside) return;
+    aside.classList.add('is-viewport-fitted');
+    var ticking = false;
+
+    function fit() {
+      ticking = false;
+      if (getComputedStyle(aside).display === 'none') return; 
+      var top = Math.max(aside.getBoundingClientRect().top, 0);
+      var available = Math.max(window.innerHeight - top - BOTTOM_GAP, MIN_HEIGHT);
+      aside.style.maxHeight = Math.floor(available) + 'px';
+    }
+
+    function schedule() {
+      if (!ticking) {
+        ticking = true;
+        window.requestAnimationFrame(fit);
+      }
+    }
+
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    window.addEventListener('load', schedule);
+    aside.addEventListener('transitionend', schedule); 
+    fit();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();

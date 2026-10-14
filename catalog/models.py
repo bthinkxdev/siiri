@@ -516,6 +516,16 @@ class ProductVariant(TimeStampedModel):
     def __str__(self) -> str:
         return f"{self.product.sku}-{self.sku_suffix}"
 
+    @property
+    def full_sku(self) -> str:
+        """Order/invoice SKU: parent SKU + "-" + suffix (parent SKU alone when no suffix)."""
+        return f"{self.product.sku}-{self.sku_suffix}" if self.sku_suffix else self.product.sku
+
+    @property
+    def display_sku(self) -> str:
+        """Storefront (PDP) SKU: the variant's own SKU as entered; parent SKU only when it's blank."""
+        return (self.sku_suffix or "").strip() or self.product.sku
+
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         if self.product_id:

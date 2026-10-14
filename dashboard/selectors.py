@@ -43,27 +43,20 @@ def get_sales_series(*, days: int = 14) -> dict[str, list]:
 
 
 def get_customer_split() -> dict[str, list[float]]:
-    """Return [new%, returning%] over the last 30 days (true unique human count)."""
-    start = timezone.localdate() - timedelta(days=30)
-    
-    # 1.how many brand new accounts were created in the last 30 days?
-    from accounts.models import CustomerProfile
-    new_customers = CustomerProfile.objects.filter(created_at__date__gte=start).count()
-    
-    # 2.how many unique people placed a real (non-abandoned, non-cancelled) order
-    # in the last 30 days?
-    unique_buyers = Order.objects.filter(
-        created_at__date__gte=start, order_status__in=REVENUE_ORDER_STATUSES
-    ).values("customer_profile").distinct().count()
-    
-    # returning = people who bought minus the newly created accounts
-    returning_customers = max(0, unique_buyers - new_customers)
-    
-    total = new_customers + returning_customers
+    """
+    Return [new%, returning%] among customers who ordered in the last 30 days.
+
+    A customer is "returning" when they have more than one real order in their history,
+    so a repeat purchase by an existing customer moves them into the returning share.
+    """
+    from reports.selectors import get_customer_split_counts
+
+    counts = get_customer_split_counts(since=timezone.localdate() - timedelta(days=30))
+    total = counts["new"] + counts["returning"]
     if total == 0:
         return {"series": [0, 0]}
-        
-    new_pct = round(100 * new_customers / total)
+
+    new_pct = round(100 * counts["new"] / total)
     return {"series": [new_pct, 100 - new_pct]}
 
 

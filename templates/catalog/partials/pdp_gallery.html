@@ -46,8 +46,9 @@
 <div class="modal fade" id="pdpGalleryModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-fullscreen modal-dialog-centered">
     <div class="modal-content bg-black">
-      <button type="button" class="btn btn-dark rounded-circle position-absolute top-0 end-0 m-3 d-flex align-items-center justify-content-center shadow" data-bs-dismiss="modal" aria-label="Close" style="width: 44px; height: 44px; z-index: 1060; opacity: 0.9;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
+      {# Not a .btn: the theme's generic .btn padding (0.7rem 1.6rem) squeezed the icon to 0px inside this 44px circle. Styled by .jm-gallery-close in main.css. #}
+      <button type="button" class="jm-gallery-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
           <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
         </svg>
       </button>

@@ -168,18 +168,32 @@
   }
   
   /* re-add labels */
-  [data-formset="variants"] tbody[data-formset-body] td:nth-child(2)::before { content: "Variant Type"; display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
-  [data-formset="variants"] tbody[data-formset-body] td:nth-child(3)::before { content: "Variant Name"; display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
-  [data-formset="variants"] tbody[data-formset-body] td:nth-child(4)::before { content: "Base Price"; display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
-  [data-formset="variants"] tbody[data-formset-body] td:nth-child(5)::before { content: "MRP"; display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
-  [data-formset="variants"] tbody[data-formset-body] td:nth-child(6)::before { content: "Purchase Price"; display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
+  [data-formset="variants"] tbody[data-formset-body] td:nth-child(2)::before { content: "Variant Type *"; display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
+  [data-formset="variants"] tbody[data-formset-body] td:nth-child(3)::before { content: "Variant Name *"; display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
+  [data-formset="variants"] tbody[data-formset-body] td:nth-child(4)::before { content: "Base Price *"; display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
+  [data-formset="variants"] tbody[data-formset-body] td:nth-child(5)::before { content: "MRP *"; display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
+  [data-formset="variants"] tbody[data-formset-body] td:nth-child(6)::before { content: "Purchase Price *"; display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
   [data-formset="variants"] tbody[data-formset-body] td:nth-child(7)::before { content: "SKU Suffix"; display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
-  [data-formset="variants"] tbody[data-formset-body] td:nth-child(8)::before { content: "Stock Quantity"; display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
-  [data-formset="variants"] tbody[data-formset-body] td:nth-child(9)::before { content: "Low Stock Threshold"; display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
+  [data-formset="variants"] tbody[data-formset-body] td:nth-child(8)::before { content: "Stock Quantity *"; display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
+  [data-formset="variants"] tbody[data-formset-body] td:nth-child(9)::before { content: "Low Stock Threshold *"; display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
 </style>
 <form id="product-form" method="post" enctype="multipart/form-data" novalidate>
   {% csrf_token %}
-  {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+  {% if form.errors %}
+  <div class="alert alert-danger" id="product-form-errors" role="alert" tabindex="-1">
+    <div class="fw-semibold mb-1">The product was not saved. Please fix the following:</div>
+    <ul class="mb-0 ps-3">
+      {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+      {% for field in form %}{% for error in field.errors %}
+      <li><a href="#{{ field.id_for_label }}" class="alert-link">{{ field.label }}</a>: {{ error }}</li>
+      {% endfor %}{% endfor %}
+    </ul>
+  </div>
+  {% elif variants.total_error_count %}
+  <div class="alert alert-danger" id="product-form-errors" role="alert" tabindex="-1">
+    <div class="fw-semibold">The product was not saved. Please fix the highlighted fields in the Variants section.</div>
+  </div>
+  {% endif %}
   {% if variants.non_form_errors or images.non_form_errors or specifications.non_form_errors %}
   <div class="alert alert-danger">
     {% for error in variants.non_form_errors %}<div>{{ error }}</div>{% endfor %}
@@ -207,9 +221,9 @@
             <div class="col-md-4">{% include "dashboard/partials/_field.html" with field=form.slug %}</div>
             {% if form.brand %}<div class="col-md-4">{% include "dashboard/partials/_field.html" with field=form.brand %}</div>{% endif %}
             <div class="col-md-4">{% include "dashboard/partials/_field.html" with field=form.size_chart %}</div>
-            <div class="col-md-3">{% include "dashboard/partials/_field.html" with field=form.base_price %}</div>
-            <div class="col-md-3">{% include "dashboard/partials/_field.html" with field=form.mrp %}</div>
-            <div class="col-md-3">{% include "dashboard/partials/_field.html" with field=form.purchase_price %}</div>
+            <div class="col-md-3">{% include "dashboard/partials/_field.html" with field=form.base_price force_required=True %}</div>
+            <div class="col-md-3">{% include "dashboard/partials/_field.html" with field=form.mrp force_required=True %}</div>
+            <div class="col-md-3">{% include "dashboard/partials/_field.html" with field=form.purchase_price force_required=True %}</div>
             <div class="col-md-3">{% include "dashboard/partials/_field.html" with field=form.color %}</div>
           </div>
         </div>
@@ -281,14 +295,14 @@
               <thead>
                 <tr>
                   <th class="d-none"></th>
-                  <th>Type</th>
-                  <th>Name</th>
-                  <th>Base Price</th>
-                  <th>MRP</th>
-                  <th>Purchase Price</th>
+                  <th>Type <span class="text-danger">*</span></th>
+                  <th>Name <span class="text-danger">*</span></th>
+                  <th>Base Price <span class="text-danger">*</span></th>
+                  <th>MRP <span class="text-danger">*</span></th>
+                  <th>Purchase Price <span class="text-danger">*</span></th>
                   <th>SKU suffix</th>
-                  <th>Stock</th>
-                  <th>Threshold</th>
+                  <th>Stock <span class="text-danger">*</span></th>
+                  <th>Threshold <span class="text-danger">*</span></th>
                   <th class="text-center">Default</th>
                   <th class="text-center">Remove</th>
                 </tr>
@@ -403,14 +417,17 @@
               <tbody data-formset-body>
                 {% for iform in images %}
                 <tr>
-                  <td class="d-none">{{ iform.id }}</td>
+                  <td class="d-none">{{ iform.id }}{{ iform.image_pending }}</td>
                   <td>
-                    {% if iform.instance.pk and iform.instance.image %}<img src="{{ iform.instance.image.url }}"
+                    {% if iform.pending_urls.image %}<img src="{{ iform.pending_urls.image }}"
+                      class="thumb" data-img-preview alt="">
+                    {% elif iform.instance.pk and iform.instance.image %}<img src="{{ iform.instance.image.url }}"
                       class="thumb" data-img-preview alt="">
                     {% else %}<img src="" class="thumb d-none" data-img-preview alt="">{% endif %}
                   </td>
                   <td>
                     {{ iform.image }}
+                    {% if iform.pending_names.image %}<div class="form-text text-success" data-pending-note><i class="ti ti-check me-1"></i>Kept: {{ iform.pending_names.image }} (choose a file only to replace it)</div>{% endif %}
                     {% if iform.image.errors %}<div class="text-danger small mt-1">{{ iform.image.errors|join:", " }}</div>{% endif %}
                   </td>
                   <td>
@@ -440,7 +457,7 @@
           </div>
           <template data-formset-empty>
             <tr>
-              <td class="d-none">{{ images.empty_form.id }}</td>
+              <td class="d-none">{{ images.empty_form.id }}{{ images.empty_form.image_pending }}</td>
               <td><img src="" class="thumb d-none" data-img-preview alt=""></td>
               <td>{{ images.empty_form.image }}</td>
               <td>{{ images.empty_form.alt_text }}</td>
@@ -579,6 +596,8 @@
             {% include "dashboard/partials/_field.html" with field=form.meta_title %}
             {% include "dashboard/partials/_field.html" with field=form.meta_description %}
             {% include "dashboard/partials/_field.html" with field=form.og_image %}
+            {{ form.og_image_pending }}
+            {% if form.pending_names.og_image %}<div class="form-text text-success mt-n2 mb-3" data-pending-note><i class="ti ti-check me-1"></i>Kept: {{ form.pending_names.og_image }} (choose a file only to replace it)</div>{% endif %}
           </div>
         </div>
 
@@ -587,7 +606,7 @@
             <h3 class="panel-title">Inventory</h3>
           </div>
           <div class="card-body">
-            {% include "dashboard/partials/_field.html" with field=form.stock_quantity %}
+            {% include "dashboard/partials/_field.html" with field=form.stock_quantity force_required=True %}
             {% include "dashboard/partials/_field.html" with field=form.low_stock_threshold %}
           </div>
         </div>
@@ -600,11 +619,10 @@
 <script>
 document.addEventListener("DOMContentLoaded", function() {
   function updateProductFieldsVisibility() {
-    const variantRows = document.querySelectorAll('#variant-select-group tr, tbody[data-formset-body] tr');
     let hasVariants = false;
-    
-    // check if any variant row is active
-    document.querySelectorAll('tbody[data-formset-body] tr').forEach(row => {
+
+
+    document.querySelectorAll('[data-formset="variants"] tbody[data-formset-body] tr').forEach(row => {
       const delCheckbox = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
       if (row.style.display !== 'none' && (!delCheckbox || !delCheckbox.checked)) {
         hasVariants = true;
@@ -649,6 +667,60 @@ document.addEventListener("DOMContentLoaded", function() {
   }
 
   updateProductFieldsVisibility();
+
+  
+  var productFormEl = document.getElementById('product-form');
+  function clearRequiredError(input) {
+    var cell = input.parentElement;
+    var msg = cell && cell.querySelector(':scope > .js-required-error');
+    if (msg) msg.remove();
+    if (!cell || !cell.querySelector(':scope > .text-danger:not(.js-required-error)')) {
+      input.classList.remove('is-invalid');
+    }
+  }
+  function isActiveVariantRow(row) {
+    if (!row) return true; // not inside a variant row
+    if (row.style.display === 'none') return false;
+    var del = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
+    return !(del && del.checked);
+  }
+  if (productFormEl) {
+    productFormEl.addEventListener('input', function (e) {
+      if (e.target.matches && e.target.matches('[data-required-msg]') && String(e.target.value).trim() !== '') {
+        clearRequiredError(e.target);
+      }
+    });
+    productFormEl.addEventListener('submit', function (e) {
+      updateProductFieldsVisibility();
+      var firstInvalid = null;
+      productFormEl.querySelectorAll('[data-required-msg]').forEach(function (input) {
+        clearRequiredError(input);
+        if (input.closest('template')) return;
+        var row = input.closest('tbody[data-formset-body] tr');
+        if (!isActiveVariantRow(row)) return;
+        if (!row && input.offsetParent === null) return; // product field hidden because variants exist
+        if (String(input.value).trim() !== '') return;
+        input.classList.add('is-invalid');
+        var msg = document.createElement('div');
+        msg.className = 'text-danger small mt-1 js-required-error';
+        msg.textContent = input.getAttribute('data-required-msg');
+        input.insertAdjacentElement('afterend', msg);
+        if (!firstInvalid) firstInvalid = input;
+      });
+      if (firstInvalid) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        firstInvalid.scrollIntoView({ block: 'center' });
+        firstInvalid.focus({ preventScroll: true });
+      }
+    });
+  }
+
+  var errorSummary = document.getElementById('product-form-errors');
+  if (errorSummary) {
+    errorSummary.scrollIntoView({ block: 'start' });
+    errorSummary.focus({ preventScroll: true });
+  }
 
   document.addEventListener('click', function(e) {
     if (e.target.closest('[data-formset-add]') || e.target.closest('[data-row-remove]') || e.target.closest('input[type="checkbox"][name$="-DELETE"]')) {

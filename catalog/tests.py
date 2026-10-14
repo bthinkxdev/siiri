@@ -154,3 +154,33 @@ class MultiVariantTypeGroupingTests(TestCase):
         self.assertIn("Qty", content)
         for variant_name in ("S", "M", "1 Pc", "2 Pc"):
             self.assertIn(variant_name, content)
+
+
+class PdpVariantSkuTests(TestCase):
+    """The PDP SKU must be the selected variant's own SKU (not the parent's, not parent + variant)."""
+
+    def setUp(self) -> None:
+        from catalog.models import Product, ProductVariant
+
+        self.product = Product.objects.create(
+            name="Sku Kurta", slug="sku-kurta", sku="KRT", base_price="349.00",
+            mrp="349.00", purchase_price="100.00", stock_quantity=10,
+        )
+        mk = lambda name, suffix, default=False: ProductVariant.objects.create(
+            product=self.product, variant_type="Size", name=name, base_price="349.00", mrp="349.00",
+            purchase_price="100.00", stock_quantity=5, sku_suffix=suffix, is_default=default,
+        )
+        self.s = mk("S", "S", default=True)
+        self.m = mk("M", "M")
+        self.plain = mk("L", "")
+
+    def test_variant_price_endpoint_returns_variant_sku(self):
+        from django.urls import reverse
+        url = reverse("catalog:variant-price", kwargs={"product_id": self.product.pk})
+        self.assertEqual(self.client.get(url, {"variant_id": self.m.pk}).json()["sku"], "M")
+        self.assertEqual(self.client.get(url, {"variant_id": self.plain.pk}).json()["sku"], "KRT")  #no suffix
+
+    def test_pdp_renders_selected_variant_sku(self):
+        from django.urls import reverse
+        html = self.client.get(reverse("catalog:pdp", kwargs={"slug": self.product.slug}), {"variant_id": self.m.pk}).content.decode()
+        self.assertIn('<span id="pdp-sku-value">M</span>', html)

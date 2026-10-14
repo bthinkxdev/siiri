@@ -72,8 +72,7 @@ def _order_item_variant_snapshot(*, product, variant) -> tuple[str, str]:
     survives a later variant edit/delete — see OrderItem.variant_name/variant_sku."""
     if variant is None:
         return "", ""
-    sku = f"{product.sku}-{variant.sku_suffix}" if variant.sku_suffix else product.sku
-    return variant.name, sku
+    return variant.name, variant.full_sku
 
 
 def _sync_checkout_pending_order(

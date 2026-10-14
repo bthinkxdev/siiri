@@ -25,11 +25,11 @@
       <div class="cart-line__meta text-muted small mt-1 mb-1">{{ line.variant.name }}</div>
       {% endif %}
       <div class="cart-line__meta">{{ display_currency.symbol }} {{ line.unit_price_at_add }}</div>
-      {% with max_stock=line.variant.stock_quantity|default_if_none:line.product.stock_quantity %}
-      {% if not line.product.is_in_stock or max_stock <= 0 %}
-      <div class="text-danger small mt-1">{% trans "Out of stock" %}</div>
-      {% elif line.quantity > max_stock %}
-      <div class="text-danger small mt-1">{% trans "Only" %} {{ max_stock }} {% trans "items available in stock." %}</div>
+      {% with max_stock=line.max_stock %}
+      {% if line.is_out_of_stock %}
+      <div class="jm-stock-alert jm-stock-alert--out mt-2" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>{% trans "Out of stock" %}</span></div>
+      {% elif line.exceeds_stock %}
+      <div class="jm-stock-alert jm-stock-alert--low mt-2" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>{% trans "Only" %} {{ max_stock }} {% trans "items available in stock." %}</span></div>
       {% elif error_item_id == line.item.pk and error %}
       <div class="text-danger small mt-1">{{ error }}</div>
       {% endif %}
@@ -59,7 +59,9 @@
     <form method="post" action="{% url 'cart:remove' %}">
       {% csrf_token %}
       <input type="hidden" name="cart_item_id" value="{{ line.item.pk }}">
-      <button class="btn btn-sm btn-ghost text-danger" type="button" hx-post="{% url 'cart:remove' %}" hx-target="#cart-drawer-body" hx-swap="innerHTML" hx-include="closest form" aria-label="{% trans 'Remove' %}">×</button>
+      <button class="btn btn-sm btn-ghost btn-ghost--icon jm-drawer-remove text-danger" type="button" hx-post="{% url 'cart:remove' %}" hx-target="#cart-drawer-body" hx-swap="innerHTML" hx-include="closest form" aria-label="{% trans 'Delete item' %}" title="{% trans 'Delete item' %}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      </button>
     </form>
     </li>
     {% endfor %}

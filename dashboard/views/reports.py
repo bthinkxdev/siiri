@@ -14,10 +14,9 @@ from django.views.decorators.http import require_POST
 from dashboard.access import dashboard_required
 from reports.selectors import (
     get_admin_dashboard_summary,
-    get_daily_customer_reports,
+    get_customer_report_rows,
     get_daily_sales_reports,
     get_live_today_sales_report,
-    get_live_today_customer_report,
 )
 from reports.services import aggregate_daily_reports
 
@@ -97,13 +96,12 @@ def reports_view(request: HttpRequest) -> HttpResponse:
         customers = {"results": []}
     else:
         sales = get_daily_sales_reports(start_date=start, end_date=end, page=1, page_size=366)
-        customers = get_daily_customer_reports(start_date=start, end_date=end, page=1, page_size=366)
+       
+        customers = {"results": get_customer_report_rows(start_date=start, end_date=end)}
 
         if start <= today <= end:
             sales["results"] = [r for r in sales["results"] if r.report_date != today]
             sales["results"].insert(0, get_live_today_sales_report())
-            customers["results"] = [r for r in customers["results"] if r.report_date != today]
-            customers["results"].insert(0, get_live_today_customer_report())
 
     ordered = list(reversed(sales["results"]))
     

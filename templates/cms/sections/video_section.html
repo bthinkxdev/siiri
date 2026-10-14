@@ -1,18 +1,22 @@
 {% load i18n static %}
-{% with video=section_context.video %}
-{% if video %}
-<section class="hm-video" aria-label="{% if video.title %}{{ video.title }}{% elif section_context.title %}{{ section_context.title }}{% else %}{% trans 'Video' %}{% endif %}">
-  {% if video.title or section_context.title or video.subtitle %}
+{% for video in section_context.videos %}
+{% with heading=video.title|default:section_context.title %}
+<section class="hm-video" aria-label="{% if video.title %}{{ video.title }}{% elif forloop.first and section_context.title %}{{ section_context.title }}{% else %}{% trans 'Video' %}{% endif %}">
+  {% if video.title or video.subtitle or forloop.first and section_context.title %}
   <div class="hm-wrap">
-    {% include "cms/sections/_ornament_head.html" with title=video.title|default:section_context.title subtitle=video.subtitle %}
+    {% if forloop.first %}
+    {% include "cms/sections/_ornament_head.html" with title=heading subtitle=video.subtitle %}
+    {% else %}
+    {% include "cms/sections/_ornament_head.html" with title=video.title subtitle=video.subtitle %}
+    {% endif %}
   </div>
   {% endif %}
   <div class="hm-video__frame">
-    <video class="hm-video__player" autoplay muted loop playsinline disablepictureinpicture preload="auto"{% if video.poster %} poster="{{ video.poster }}"{% endif %} data-autoplay-video aria-hidden="true" tabindex="-1">
+    <video class="hm-video__player" autoplay muted loop playsinline disablepictureinpicture preload="{% if forloop.first %}auto{% else %}metadata{% endif %}"{% if video.poster %} poster="{{ video.poster }}"{% endif %} data-autoplay-video aria-hidden="true" tabindex="-1">
       <source src="{{ video.src }}" type="{{ video.mime }}">
     </video>
   </div>
-  <script src="{% static 'js/autoplay-video.js' %}" defer></script>
 </section>
-{% endif %}
 {% endwith %}
+{% if forloop.last %}<script src="{% static 'js/autoplay-video.js' %}" defer></script>{% endif %}
+{% endfor %}

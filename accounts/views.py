@@ -927,15 +927,13 @@ def customer_invoice_detail(request: HttpRequest, pk: int) -> HttpResponse:
         pk=pk
     )
     
-    #security check to prevent unauthorized invoice downloads
-    if request.user.is_authenticated:
-        if order.customer_profile and order.customer_profile.user != request.user:
-            from django.http import Http404
-            raise Http404("Invoice not found.")
-    else:
-        if order.cart and order.cart.session_key != request.session.session_key:
-            from django.http import Http404
-            raise Http404("Invoice not found.")
+    #same access rule as the confirmation page that links here: the logged-in
+    #owner, or the guest session that placed the order. 
+    from orders.selectors import can_view_order
+
+    if not can_view_order(request=request, order=order):
+        from django.http import Http404
+        raise Http404("Invoice not found.")
 
     context = {
         "order": order,

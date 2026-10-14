@@ -72,14 +72,20 @@ def aggregate_daily_reports(*, report_date: date | None = None) -> dict[str, int
             revenue=row["revenue"] or Decimal("0"),
         )
 
-    new_customers = CustomerProfile.objects.filter(created_at__date=report_date).count()
-    returning = orders.values("customer_profile").distinct().count()
+    from reports.selectors import get_customer_report_rows
+
+    customer_rows = get_customer_report_rows(start_date=report_date, end_date=report_date)
+    customer_row = customer_rows[0] if customer_rows else None
     DailyCustomerReport.objects.update_or_create(
         report_date=report_date,
         defaults={
-            "new_customers": new_customers,
-            "returning_customers": max(returning - new_customers, 0),
-            "total_active_customers": CustomerProfile.objects.count(),
+            "new_customers": customer_row.new_customers if customer_row else 0,
+            "returning_customers": customer_row.returning_customers if customer_row else 0,
+            "total_active_customers": (
+                customer_row.total_active_customers
+                if customer_row
+                else CustomerProfile.objects.filter(created_at__date__lte=report_date).count()
+            ),
         },
     )
 

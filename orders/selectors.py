@@ -101,3 +101,12 @@ def get_order_tracking_view(
 
     history = list(order.status_history.all())
     return OrderTrackingView(order=order, status_history=history)
+
+
+def can_view_order(*, request: Any, order: Order) -> bool:
+
+    user = getattr(request, "user", None)
+    if user is not None and user.is_authenticated and hasattr(user, "customer_profile"):
+        if order.customer_profile_id == user.customer_profile.pk:
+            return True
+    return order.pk in request.session.get("owned_order_ids", [])
