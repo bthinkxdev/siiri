@@ -1,6 +1,6 @@
 :root {
   /* SIRI COUTURE — warm cream / deep maroon palette */
-  --jm-white: #FEFDFA;
+  --jm-white: #FFFFFF;
   --jm-sand: #E7CEB4;
   --jm-ink: #1A0A08;
   --jm-accent: #4A0908;
@@ -2400,62 +2400,46 @@ body.mobile-search-open {
 .jm-loader__mark {
   position: relative;
   z-index: 1;
-  width: min(128px, 32vw);
-  aspect-ratio: 1;
-  display: grid;
-  place-items: center;
-}
-
-.jm-loader__media {
-  position: relative;
-  z-index: 2;
-  width: 62%;
-  height: 62%;
-  border-radius: 50%;
-  object-fit: cover;
-  box-shadow: 0 0 0 1px var(--jm-border-light), 0 6px 24px rgba(26, 10, 8, 0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   animation: jm-loader-pulse 1.8s ease-in-out infinite;
 }
 
-.jm-loader__ring {
-  position: absolute;
-  inset: 0;
-  margin: auto;
-  width: 62%;
-  height: 62%;
-  border-radius: 50%;
-  border: 1.5px solid var(--jm-gold);
-  opacity: 0;
-  animation: jm-loader-burst 1.8s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+.jm-loader__wordmark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4em;
 }
 
-.jm-loader__ring--2 {
-  border-color: var(--jm-accent);
-  animation-delay: 0.45s;
+.jm-loader__wordmark-main {
+  font-family: var(--font-display);
+  font-size: clamp(2.1rem, 2vw + 1.6rem, 3.1rem);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  color: var(--jm-accent);
+  text-transform: uppercase;
 }
 
-.jm-loader__ring--3 {
-  border-color: var(--jm-gold);
-  animation-delay: 0.9s;
-}
-
-@keyframes jm-loader-burst {
-  0% {
-    transform: scale(1);
-    opacity: 0.65;
-  }
-  100% {
-    transform: scale(2.4);
-    opacity: 0;
-  }
+.jm-loader__wordmark-sub {
+  font-family: var(--font-sans);
+  font-size: clamp(0.7rem, 0.3vw + 0.6rem, 0.8rem);
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  color: var(--jm-gold);
+  text-transform: uppercase;
 }
 
 @keyframes jm-loader-pulse {
   0%, 100% {
-    transform: scale(1);
+    opacity: 1;
   }
   50% {
-    transform: scale(1.05);
+    opacity: 0.55;
   }
 }
 
@@ -2464,12 +2448,7 @@ body.mobile-search-open {
     transition: none;
   }
 
-  .jm-loader__ring {
-    animation: none;
-    opacity: 0;
-  }
-
-  .jm-loader__media {
+  .jm-loader__mark {
     animation: none;
   }
 }
