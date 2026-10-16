@@ -5946,28 +5946,19 @@ h1, h2, h3, h4,
 /* SIRI COUTURE: header layer (announcement bar, header row, hanging logo card, search sheet) */
 
 .siri-hd {
-  /* header row height, how far the logo card hangs below it, and the card width */
+  /* header row height and the logo card's width */
   --siri-row: 56px;
-  --siri-hang: 24px;
   --siri-card-w: 88px;
   --siri-gutter: clamp(12px, 3vw, 24px);
   z-index: 1030;
-  /* room for the card on pages that have no hero to slide under (see :has() rule below) */
-  margin-bottom: var(--siri-hang);
 }
 
 @media (min-width: 992px) {
   .siri-hd {
     --siri-row: 80px;
-    --siri-hang: 50px;
     --siri-card-w: clamp(104px, 11.5vw, 168px);
     --siri-gutter: clamp(20px, 4.2vw, 64px);
   }
-}
-
-/* A hero directly under the header: the card is meant to overlap it, so no spacer. */
-body.jm-body:has(#main-content :is(.hm-hero, .jm-hero)) .siri-hd {
-  margin-bottom: 0;
 }
 
 body.jm-body .site-header.siri-hd,
@@ -5980,9 +5971,9 @@ body.jm-body .site-header.siri-hd.sticky-top {
   overflow: visible;
 }
 
-/* When hidden on scroll-down the hanging card must slide away with the bar. */
+/* When hidden on scroll-down, the bar only needs to clear its own height. */
 body.jm-body .site-header.siri-hd.jm-header--hidden {
-  transform: translateY(calc(-100% - var(--siri-hang) - 12px));
+  transform: translateY(-100%);
 }
 
 /* ---------- Announcement bar ---------- */
@@ -6301,7 +6292,7 @@ body.jm-body .site-header.siri-hd.jm-header--hidden {
   color: var(--jm-accent);
 }
 
-/* ---------- Hanging logo card ---------- */
+/* ---------- Logo mark ---------- */
 .siri-logo-card {
   position: absolute;
   top: 0;
@@ -6311,12 +6302,10 @@ body.jm-body .site-header.siri-hd.jm-header--hidden {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 2px;
   width: var(--siri-card-w);
-  height: calc(var(--siri-row) + var(--siri-hang));
-  padding: 8px 8px 10px;
-  background: #fff;
-  box-shadow: 0 6px 18px rgba(26, 10, 8, 0.1);
+  height: var(--siri-row);
+  padding: 4px 8px;
   transform: translateX(-50%);
   text-align: center;
 }
@@ -6335,7 +6324,7 @@ body.jm-body .site-header.siri-hd.jm-header--hidden {
   width: auto;
   max-width: 100%;
   height: auto;
-  max-height: calc(var(--siri-row) + var(--siri-hang) - 46px);
+  max-height: calc(var(--siri-row) - 24px);
   object-fit: contain;
 }
 
@@ -6369,8 +6358,8 @@ body.jm-body .site-header.siri-hd.jm-header--hidden {
 
 @media (min-width: 992px) {
   .siri-logo-card {
-    gap: 8px;
-    padding: 10px 10px 12px;
+    gap: 4px;
+    padding: 6px 10px;
   }
 
   .siri-logo-card__tagline {
