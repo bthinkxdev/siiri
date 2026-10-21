@@ -223,6 +223,11 @@ class SiteSettings(TimeStampedModel):
         verbose_name="Store address",
         help_text="Physical store address shown in the footer, contact page, and about page.",
     )
+    store_maps_url = models.URLField(
+        blank=True,
+        verbose_name="Google Maps Link",
+        help_text="Paste a Google Maps share link for the 'Get Directions' button on the About page. Leave blank to auto-generate a search link from the store address.",
+    )
     vendor_email = models.EmailField(
         blank=True,
         verbose_name="Vendor Email",

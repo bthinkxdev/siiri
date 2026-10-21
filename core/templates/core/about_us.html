@@ -1,9 +1,13 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n static %}
 
 {% block title %}{{ seo_title }}{% endblock %}
 
 {% block content %}
+<div class="jm-about-hero">
+  <img src="{% static 'img/Siiri Couture Boutique Facade.png' %}" alt="{{ site_settings.site_name }}" class="jm-about-hero__img">
+</div>
+
 <div class="container page-container jm-narrow py-4">
   <h1 class="section-title mb-4">{% trans "About Us" %}</h1>
 
@@ -13,6 +17,45 @@
       <a href="{% url 'core:contact-us' %}">{% trans "Contact us" %}</a>.
     </p>
   </div>
+
+  {% if site_settings.store_address or site_settings.whatsapp_number %}
+  <div class="jm-store-card mt-4">
+    <div class="jm-store-card__head">
+      <span class="jm-store-card__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9.5 4.5 4h15L21 9.5" />
+          <path d="M3 9.5a2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0" />
+          <path d="M5 11v9h14v-9" />
+          <path d="M9.5 20v-5.5h5V20" />
+        </svg>
+      </span>
+      <h2 class="jm-store-card__title">{{ site_settings.site_name }} {% trans "Store" %}</h2>
+    </div>
+
+    {% if site_settings.store_address %}
+    <p class="jm-store-card__address">{{ site_settings.store_address|linebreaksbr }}</p>
+    {% endif %}
+
+    {% if site_settings.store_maps_url or site_settings.store_address %}
+    <a href="{% if site_settings.store_maps_url %}{{ site_settings.store_maps_url }}{% else %}https://www.google.com/maps/search/?api=1&query={{ site_settings.store_address|urlencode }}{% endif %}"
+      target="_blank" rel="noopener" class="jm-store-card__link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4z" />
+      </svg>
+      {% trans "Get Directions" %}
+    </a>
+    {% endif %}
+
+    {% if site_settings.whatsapp_number %}
+    <a href="tel:{{ site_settings.whatsapp_number }}" class="jm-store-card__link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+      </svg>
+      {{ site_settings.whatsapp_number }}
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
 
   <div class="card p-4 mt-4">
     <h6 class="mb-3">{% trans "Company Details" %}</h6>
