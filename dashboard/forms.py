@@ -201,6 +201,7 @@ class CollectionForm(SlugAutoMixin):
         fields = [
             "name",
             "slug",
+            "parent",
             "display_order",
             "is_active",
             "show_on_homepage",
@@ -213,6 +214,13 @@ class CollectionForm(SlugAutoMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["slug"].required = False
+        #cap the hierarchy at 2 levels: a parent choice must itself be
+        #top-level, and a collection can't be its own parent.
+        parent_qs = Collection.objects.filter(parent__isnull=True).order_by("display_order", "name")
+        if self.instance.pk:
+            parent_qs = parent_qs.exclude(pk=self.instance.pk)
+        self.fields["parent"].queryset = parent_qs
+        self.fields["parent"].required = False
 
 
 class _FacetForm(SlugAutoMixin):
@@ -896,6 +904,7 @@ class SiteSettingsForm(forms.ModelForm):
         "whatsapp_number",
         "store_address",
         "store_maps_url",
+        "store_timings",
         "vendor_email",
         "order_notification_email",
         "tax_rate_percent",
@@ -930,6 +939,7 @@ class SiteSettingsForm(forms.ModelForm):
             "whatsapp_number",
             "store_address",
             "store_maps_url",
+            "store_timings",
             "vendor_email",
             "order_notification_email",
             "tax_rate_percent",

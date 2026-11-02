@@ -209,7 +209,7 @@ class SiteSettings(TimeStampedModel):
     and template slugs are stored here.
     """
 
-    site_name = models.CharField(max_length=120, default="SIRI COUTURE")
+    site_name = models.CharField(max_length=120, default="SIIRI COUTURE")
     logo = models.ImageField(upload_to="site/", blank=True, null=True, verbose_name="Logo")
     primary_color = models.CharField(max_length=7, default="#0369A1")
     secondary_color = models.CharField(max_length=7, default="#0B1220")
@@ -227,6 +227,12 @@ class SiteSettings(TimeStampedModel):
         blank=True,
         verbose_name="Google Maps Link",
         help_text="Paste a Google Maps share link for the 'Get Directions' button on the About page. Leave blank to auto-generate a search link from the store address.",
+    )
+    store_timings = models.CharField(
+        max_length=160,
+        blank=True,
+        verbose_name="Store Timings",
+        help_text="Shown on the About page, e.g. 'Monday – Sunday: 10:00 AM – 8:00 PM'.",
     )
     vendor_email = models.EmailField(
         blank=True,

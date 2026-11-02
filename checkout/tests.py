@@ -253,8 +253,11 @@ class PlaceOrderGatewayUnavailableTests(TestCase):
     If Razorpay is configured but unreachable/rejects the request,
     checkout_place_order_view must render a friendly, actionable error — not
     propagate PaymentGatewayError into an unhandled 500. The order itself
-    stays at CHECKOUT_PENDING so the same idempotency_key can be resubmitted
-    with Cash on Delivery (see PlaceOrderCodAfterAbandonedOnlineAttemptTests).
+    stays at CHECKOUT_PENDING so the same idempotency_key can be resubmitted.
+    COD is no longer offered as a resubmission path (see
+    GatewayKeyServerSideValidationTests for the "cod" rejection itself);
+    historical COD orders placed before its removal are still handled by
+    PlaceOrderCodAfterAbandonedOnlineAttemptTests at the service layer.
     """
 
     def setUp(self) -> None:
@@ -283,7 +286,7 @@ class PlaceOrderGatewayUnavailableTests(TestCase):
         response = self.client.post(
             reverse("checkout:place-order"),
             data={
-                "gateway_key": "razorpay_upi",
+                "gateway_key": "razorpay",
                 "idempotency_key": "gateway-down-key-1",
                 "guest_name": "Gateway Down",
                 "guest_email": "gateway-down@example.com",
@@ -295,10 +298,55 @@ class PlaceOrderGatewayUnavailableTests(TestCase):
             },
         )
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Cash on Delivery")
+        self.assertContains(response, "try again")
+        self.assertNotContains(response, "Cash on Delivery")
         from orders.models import Order, OrderStatus
         order = Order.objects.get(idempotency_key="gateway-down-key-1")
         self.assertEqual(order.order_status, OrderStatus.CHECKOUT_PENDING)
+
+
+class GatewayKeyServerSideValidationTests(TestCase):
+    """checkout_place_order_view must reject any gateway_key outside what
+    checkout currently offers — not just hide it from the UI — since
+    CheckoutPaymentForm.gateway_key has no choices= validation of its own."""
+
+    def setUp(self) -> None:
+        self.currency, _ = Currency.objects.get_or_create(
+            code="INR",
+            defaults={"symbol": "₹", "exchange_rate_to_base": "1.00000000", "is_default": True},
+        )
+        self.profile = register_customer_email(
+            email="cod-tamper-test@example.com", password="testpass12345", name="Tamper Test"
+        )
+        self.product = Product.objects.create(
+            name="Test Yarn", slug="cod-tamper-yarn", sku="SKU-CODTAMPER-1",
+            base_price="500.00", mrp="500.00", purchase_price="300.00", stock_quantity=100,
+        )
+        self.cart = Cart.objects.create(customer_profile=self.profile, currency=self.currency)
+        CartItem.objects.create(
+            cart=self.cart, product=self.product, quantity=1, unit_price_at_add=self.product.base_price,
+        )
+        self.client.force_login(self.profile.user)
+
+    def test_cod_gateway_key_is_rejected_even_when_posted_directly(self) -> None:
+        response = self.client.post(
+            reverse("checkout:place-order"),
+            data={
+                "gateway_key": "cod",
+                "idempotency_key": "cod-tamper-key-1",
+                "guest_name": "Tamper Test",
+                "guest_email": "cod-tamper-test@example.com",
+                "guest_phone": "9876543210",
+                "guest_address_line1": "123 Test Street",
+                "guest_city": "Chennai",
+                "guest_state": "Tamil Nadu",
+                "guest_pincode": "600001",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "not available")
+        from orders.models import Order
+        self.assertFalse(Order.objects.filter(idempotency_key="cod-tamper-key-1").exists())
 
 
 class PlaceOrderCodAfterAbandonedOnlineAttemptTests(TestCase):

@@ -25,6 +25,15 @@ class Collection(TimeStampedModel):
         verbose_name="Slug",
         help_text="URL-friendly collection identifier.",
     )
+    parent = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="children",
+        verbose_name="Parent collection",
+        help_text="Leave blank for a top-level collection (its own nav item). Set to nest this under another collection as a child.",
+    )
     tagline = models.CharField(
         max_length=80,
         blank=True,

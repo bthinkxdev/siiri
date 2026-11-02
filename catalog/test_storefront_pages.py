@@ -1,4 +1,4 @@
-"""Smoke tests for the SIRI COUTURE storefront page templates."""
+"""Smoke tests for the SIIRI COUTURE storefront page templates."""
 
 from django.test import TestCase, override_settings
 from django.urls import reverse

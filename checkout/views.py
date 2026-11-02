@@ -26,6 +26,14 @@ from payments.services import process_payment
 
 logger = logging.getLogger(__name__)
 
+#checkout only ever offers one generic "pay online" option — legacy per-method
+#razorpay_* keys stay registered (payments/registry.py) for resolving
+#historical orders, but were identical clones distinguished only by a
+#cosmetic prefill tab, so there's no reason to offer them here. COD was
+#removed as a selectable option; historical COD orders still resolve fine
+#through OrderStatus.PLACED_COD in checkout/services.py.
+CHECKOUT_GATEWAY_KEYS = ("razorpay",)
+
 
 def _get_checkout_cart(request: HttpRequest, create: bool = False):
     if request.GET.get("mode") == "cart":
@@ -93,23 +101,18 @@ def checkout_save_draft_view(request: HttpRequest) -> HttpResponse:
 
 @require_POST
 def checkout_update_delivery_charge_view(request: HttpRequest) -> HttpResponse:
-    """Update cart delivery charge if COD is selected and return updated summary."""
+    """Record the selected gateway and keep the cart's delivery charge at 0."""
     cart = _get_checkout_cart(request=request, create=False)
     if not cart:
         return HttpResponse("")
 
     gateway_key = request.POST.get("gateway_key", "")
     request.session["checkout_gateway_key"] = gateway_key
-    
-    if gateway_key == "cod":
-        from core.services import get_site_settings
-        settings = get_site_settings()
-        cart.delivery_charge = settings.cod_delivery_charge
-    else:
-        from decimal import Decimal
+
+    from decimal import Decimal
+    if cart.delivery_charge != Decimal("0.00"):
         cart.delivery_charge = Decimal("0.00")
-        
-    cart.save(update_fields=["delivery_charge", "updated_at"])
+        cart.save(update_fields=["delivery_charge", "updated_at"])
 
     from django.shortcuts import redirect
     return redirect("checkout:checkout")
@@ -219,11 +222,6 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
     from payments.adapters.concrete import _get_razorpay_credentials
     razorpay_key, razorpay_secret = _get_razorpay_credentials()
 
-    #checkout only ever offers one generic "pay online" option plus COD — the
-    #legacy per-method razorpay_* keys stay registered (payments/registry.py)
-    #for resolving historical orders, but were identical clones distinguished
-    #only by a cosmetic prefill tab, so there's no reason to offer them here.
-    CHECKOUT_GATEWAY_KEYS = ("razorpay", "cod")
     available_gateways = {}
     for key in CHECKOUT_GATEWAY_KEYS:
         adapter = PAYMENT_GATEWAYS.get(key)
@@ -233,21 +231,17 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
             continue
         available_gateways[key] = adapter
 
+    if selected_gateway_key not in available_gateways:
+        #a stale session (e.g. carrying an old "cod" selection) must not
+        #stick once that gateway is no longer offered.
+        selected_gateway_key = None
     if not selected_gateway_key and available_gateways:
         selected_gateway_key = list(available_gateways.keys())[0]
-        
-    from core.services import get_site_settings
-    settings = get_site_settings()
-        
-    if selected_gateway_key == "cod":
-        if cart.delivery_charge != settings.cod_delivery_charge:
-            cart.delivery_charge = settings.cod_delivery_charge
-            cart.save(update_fields=["delivery_charge", "updated_at"])
-    else:
-        from decimal import Decimal
-        if cart.delivery_charge != Decimal("0.00"):
-            cart.delivery_charge = Decimal("0.00")
-            cart.save(update_fields=["delivery_charge", "updated_at"])
+
+    from decimal import Decimal
+    if cart.delivery_charge != Decimal("0.00"):
+        cart.delivery_charge = Decimal("0.00")
+        cart.save(update_fields=["delivery_charge", "updated_at"])
 
     #reload summary after potential delivery charge update
     summary = get_cart_summary(cart=cart)
@@ -278,7 +272,6 @@ def checkout_view(request: HttpRequest) -> HttpResponse:
             "addresses": addresses,
             "active_cities": active_cities,
             "indian_states": INDIAN_STATES,
-            "settings": settings,
 
             "payment_gateways": available_gateways,
             "selected_gateway_key": selected_gateway_key,
@@ -481,17 +474,22 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
         )
         
     gateway_key = form.cleaned_data["gateway_key"]
-    if gateway_key == "cod":
-        from core.services import get_site_settings
-        settings = get_site_settings()
-        if cart.delivery_charge != settings.cod_delivery_charge:
-            cart.delivery_charge = settings.cod_delivery_charge
-            cart.save(update_fields=["delivery_charge", "updated_at"])
-    else:
-        from decimal import Decimal
-        if cart.delivery_charge != Decimal("0.00"):
-            cart.delivery_charge = Decimal("0.00")
-            cart.save(update_fields=["delivery_charge", "updated_at"])
+    if gateway_key not in CHECKOUT_GATEWAY_KEYS:
+        #the UI never renders a disallowed gateway, but the form field has no
+        #choices= validation of its own — enforce it server-side so a direct/
+        #tampered POST can't place an order through an unavailable gateway.
+        from django.utils.translation import gettext as _
+        return render(
+            request,
+            "checkout/partials/errors.html",
+            {"errors": {"__all__": [_("That payment method is not available. Please choose a different option.")]}},
+            status=200,
+        )
+
+    from decimal import Decimal
+    if cart.delivery_charge != Decimal("0.00"):
+        cart.delivery_charge = Decimal("0.00")
+        cart.save(update_fields=["delivery_charge", "updated_at"])
 
     from cart.selectors import get_cart_summary
     summary = get_cart_summary(cart=cart)
@@ -546,7 +544,7 @@ def checkout_place_order_view(request: HttpRequest) -> HttpResponse:
             {
                 "errors": {
                     "__all__": [
-                        f"{exc} You can also resubmit this order with Cash on Delivery instead."
+                        f"{exc} Please try again in a moment."
                     ]
                 }
             },

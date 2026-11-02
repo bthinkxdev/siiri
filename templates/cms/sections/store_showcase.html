@@ -1,0 +1,13 @@
+{% load static %}
+<section class="hm-store">
+  <div class="hm-wrap hm-store__inner">
+    <img src="{% static 'img/Siiri Couture Boutique Facade.png' %}" alt="SIIRI" class="hm-store__img">
+    <div class="hm-store__brand">
+      {% if site_settings.logo %}
+      <img src="{{ site_settings.logo.url }}" alt="SIIRI" class="hm-store__logo">
+      {% else %}
+      <span class="hm-store__name">SIIRI</span>
+      {% endif %}
+    </div>
+  </div>
+</section>

@@ -13,6 +13,10 @@ from cms.models import HomeVideo, HomepageSection, HomepageSectionType
 
 
 def _make_sections() -> list[HomepageSection]:
+    #start from a clean slate regardless of what data migrations have seeded
+    #(e.g. the default "store_showcase" section) so these tests' hardcoded
+    #counts/orderings stay exact.
+    HomepageSection.objects.all().delete()
     kinds = [
         HomepageSectionType.HERO_SLIDER,
         HomepageSectionType.SHOP_BY_COLLECTION,

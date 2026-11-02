@@ -27,8 +27,8 @@
     transition: border-color 0.15s ease, background 0.15s ease;
   }
   .payment-option:has(input:checked) {
-    border-color: var(--jm-accent, #4A0908);
-    background: rgba(74, 9, 8, 0.04);
+    border-color: var(--jm-accent, #A9842C);
+    background: rgba(169, 132, 44, 0.04);
   }
   .payment-option input[type="radio"] {
     margin-right: 0.5rem;
@@ -161,8 +161,6 @@
             </span>
             {% if key == 'razorpay' %}
             <div class="text-muted small mt-1">{% trans "UPI, Credit/Debit Card, Net Banking or Wallet — via Razorpay" %}</div>
-            {% elif key == 'cod' and settings.cod_delivery_charge > 0 %}
-            <div class="text-muted small mt-1">{{ display_currency.symbol|default:"₹" }}{{ settings.cod_delivery_charge|floatformat:0 }} {% trans "extra charge" %}</div>
             {% endif %}
           </label>
           {% endfor %}
@@ -235,7 +233,7 @@
 
         {% if summary.delivery_charge > 0 %}
         <div class="d-flex justify-content-between py-2 border-bottom text-muted" style="font-size: 0.875rem;">
-          <span>{% trans "Delivery Charge (COD)" %}</span>
+          <span>{% trans "Delivery Charge" %}</span>
           <span>{{ display_currency.symbol }} {{ summary.delivery_charge }}</span>
         </div>
         {% endif %}
@@ -462,7 +460,7 @@
             return false;
           }
           var selectedGateway = document.querySelector('input[name="gateway_key"]:checked');
-          if (selectedGateway && selectedGateway.value === 'cod') {
+          if (selectedGateway) {
             document.getElementById('order-processing-overlay').classList.remove('d-none');
           }
         }

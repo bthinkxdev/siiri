@@ -6,13 +6,13 @@ from django.core.management.base import BaseCommand
 
 from core.services import get_site_settings
 
-NEW_SITE_NAME = "SIRI COUTURE"
+NEW_SITE_NAME = "SIIRI COUTURE"
 OLD_WHATSAPP_NUMBER = "+919961170396"
 OLD_EMAILS = {"yarnguyonline@gmail.com", "yarnguy.in@gmail.com"}
 
 
 class Command(BaseCommand):
-    help = "Set site_name to SIRI COUTURE and blank legacy YARN GUY contact details (idempotent)."
+    help = "Set site_name to SIIRI COUTURE and blank legacy YARN GUY contact details (idempotent)."
 
     def add_arguments(self, parser) -> None:
         parser.add_argument("--dry-run", action="store_true", help="Report changes without saving.")

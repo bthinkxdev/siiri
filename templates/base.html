@@ -16,7 +16,7 @@
 
   <meta name="csrf-token" content="{{ csrf_token }}">
 
-  <title>{% block title %}{{ seo_title|default:"SIRI COUTURE" }}{% endblock %}</title>
+  <title>{% block title %}{{ seo_title|default:"SIIRI COUTURE" }}{% endblock %}</title>
 
   {% include "includes/seo_head.html" %}
 
@@ -44,8 +44,11 @@
     <div class="jm-loader__veil" aria-hidden="true"></div>
     <div class="jm-loader__mark">
       <span class="jm-loader__wordmark">
-        <span class="jm-loader__wordmark-main">Siiri Couture</span>
-        <span class="jm-loader__wordmark-divider" aria-hidden="true"></span>
+        {% if site_settings.logo %}
+        <img src="{{ site_settings.logo.url }}" alt="SIIRI" class="jm-loader__logo">
+        {% else %}
+        <span class="jm-loader__wordmark-main">SIIRI</span>
+        {% endif %}
         <span class="jm-loader__wordmark-sub">by Spoorthi</span>
       </span>
       <span class="jm-loader__dots" aria-hidden="true">

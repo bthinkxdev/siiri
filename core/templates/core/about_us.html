@@ -29,11 +29,20 @@
           <path d="M9.5 20v-5.5h5V20" />
         </svg>
       </span>
-      <h2 class="jm-store-card__title">{{ site_settings.site_name }} {% trans "Store" %}</h2>
+      <h2 class="jm-store-card__title">SIIRI {% trans "Store" %}</h2>
     </div>
 
     {% if site_settings.store_address %}
     <p class="jm-store-card__address">{{ site_settings.store_address|linebreaksbr }}</p>
+    {% endif %}
+
+    {% if site_settings.store_timings %}
+    <p class="jm-store-card__timings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" />
+      </svg>
+      {{ site_settings.store_timings }}
+    </p>
     {% endif %}
 
     {% if site_settings.store_maps_url or site_settings.store_address %}

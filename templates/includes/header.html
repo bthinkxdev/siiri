@@ -43,70 +43,6 @@
                 href="{% url 'cms:homepage' %}">{% trans "Home" %}</a></li>
             <li><a class="siri-nav__link {% if request.resolver_match.url_name == 'plp' %}is-active{% endif %}"
                 href="{% url 'catalog:plp' %}">{% trans "Shop" %}</a></li>
-            <li class="siri-nav__item siri-nav__item--menu">
-              <a class="siri-nav__link {% if request.resolver_match.url_name == 'plp-collection' %}is-active{% endif %}"
-                href="{% url 'catalog:plp' %}">{% trans "Shop By" %}</a>
-              <div class="siri-shopby">
-                <div class="siri-shopby__col">
-                  <p class="siri-shopby__heading">{% trans "Highlights" %}</p>
-                  <ul class="siri-shopby__list">
-                    <li><a href="{% url 'catalog:plp' %}?featured=1">{{ site_settings.featured_label }}</a></li>
-                    <li><a href="{% url 'catalog:plp' %}?bestseller=1">{{ site_settings.bestseller_label }}</a></li>
-                    <li><a href="{% url 'catalog:plp' %}?new_arrival=1">{{ site_settings.new_arrival_label }}</a></li>
-                  </ul>
-                </div>
-                {% if shop_by.collections %}
-                <div class="siri-shopby__col">
-                  <p class="siri-shopby__heading">{% trans "Collections" %}</p>
-                  <ul class="siri-shopby__list">
-                    {% for collection in shop_by.collections %}
-                    <li><a href="{% url 'catalog:plp-collection' collection_slug=collection.slug %}">{{ collection.name }}</a></li>
-                    {% endfor %}
-                  </ul>
-                </div>
-                {% endif %}
-                {% if shop_by.styles %}
-                <div class="siri-shopby__col">
-                  <p class="siri-shopby__heading">{% trans "Style" %}</p>
-                  <ul class="siri-shopby__list">
-                    {% for style in shop_by.styles %}
-                    <li><a href="{% url 'catalog:plp' %}?style={{ style.pk }}">{{ style.name }}</a></li>
-                    {% endfor %}
-                  </ul>
-                </div>
-                {% endif %}
-                {% if shop_by.fabrics %}
-                <div class="siri-shopby__col">
-                  <p class="siri-shopby__heading">{% trans "Fabric" %}</p>
-                  <ul class="siri-shopby__list">
-                    {% for fabric in shop_by.fabrics %}
-                    <li><a href="{% url 'catalog:plp' %}?fabric={{ fabric.pk }}">{{ fabric.name }}</a></li>
-                    {% endfor %}
-                  </ul>
-                </div>
-                {% endif %}
-                {% if shop_by.occasions %}
-                <div class="siri-shopby__col">
-                  <p class="siri-shopby__heading">{% trans "Occasion" %}</p>
-                  <ul class="siri-shopby__list">
-                    {% for occasion in shop_by.occasions %}
-                    <li><a href="{% url 'catalog:plp' %}?occasion={{ occasion.pk }}">{{ occasion.name }}</a></li>
-                    {% endfor %}
-                  </ul>
-                </div>
-                {% endif %}
-                {% if shop_by.grades %}
-                <div class="siri-shopby__col">
-                  <p class="siri-shopby__heading">{% trans "Grade" %}</p>
-                  <ul class="siri-shopby__list">
-                    {% for grade in shop_by.grades %}
-                    <li><a href="{% url 'catalog:plp' %}?grade={{ grade.pk }}">{{ grade.name }}</a></li>
-                    {% endfor %}
-                  </ul>
-                </div>
-                {% endif %}
-              </div>
-            </li>
             <li><a class="siri-nav__link {% if request.resolver_match.url_name == 'about-us' %}is-active{% endif %}"
                 href="{% url 'core:about-us' %}">{% trans "About" %}</a></li>
             <li><a class="siri-nav__link {% if request.resolver_match.url_name == 'contact-us' %}is-active{% endif %}"
@@ -200,6 +136,42 @@
       </div>
     </div>
   </div>
+
+  {% if nav_collections %}
+  <nav class="siri-subnav d-none d-lg-block" aria-label="{% trans 'Collections' %}">
+    <ul class="siri-subnav__list">
+      {% for parent in nav_collections %}
+      <li class="siri-subnav__item{% if parent.children.all %} siri-subnav__item--menu{% endif %}">
+        <a class="siri-subnav__link {% if active_collection.slug == parent.slug or active_collection.parent_id == parent.pk %}is-active{% endif %}"
+          href="{% url 'catalog:plp-collection' collection_slug=parent.slug %}">{{ parent.name }}</a>
+        {% if parent.children.all %}
+        <div class="siri-shopby siri-shopby--category">
+          <div class="siri-shopby__zone siri-shopby__zone--highlights">
+            <p class="siri-shopby__heading">{% trans "Shop" %} {{ parent.name }}</p>
+            <ul class="siri-shopby__list siri-shopby__list--rule">
+              <li><a href="{% url 'catalog:plp-collection' collection_slug=parent.slug %}">{% trans "All" %} {{ parent.name }}</a></li>
+              {% for child in parent.children.all %}
+              <li>
+                <a href="{% url 'catalog:plp-collection' collection_slug=child.slug %}">
+                  <img src="{% if child.og_image %}{{ child.og_image.url }}{% else %}{% static 'img/product-placeholder.svg' %}{% endif %}"
+                    alt="" class="siri-shopby__list-thumb" loading="lazy">
+                  {{ child.name }}
+                </a>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          <div class="siri-shopby__zone siri-shopby__zone--hero">
+            <img src="{% if parent.og_image %}{{ parent.og_image.url }}{% else %}{% static 'img/product-placeholder.svg' %}{% endif %}"
+              alt="{{ parent.name }}" class="siri-shopby__hero-img" loading="lazy">
+          </div>
+        </div>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </nav>
+  {% endif %}
 
   <div class="offcanvas offcanvas-start d-lg-none" tabindex="-1" id="jmMainNav" aria-labelledby="jmMainNavLabel">
     <div class="offcanvas-header border-bottom">

@@ -332,6 +332,7 @@ class CollectionListView(DashboardListView):
     columns = [
         {"label": "Name", "name": "name"},
         {"label": "Slug", "name": "slug"},
+        {"label": "Parent", "name": "parent"},
         {"label": "Order", "name": "display_order"},
         {"label": "Active", "name": "is_active", "type": "bool"},
     ]

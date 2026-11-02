@@ -51,6 +51,7 @@ class HomepageSectionType(models.TextChoices):
     VIDEO_SECTION = "video_section", "Video"
     MEMORIES = "memories", "Memories Gallery"
     PRODUCT_SPOTLIGHT = "product_spotlight", "Product Spotlight"
+    STORE_SHOWCASE = "store_showcase", "Store Showcase"
 
 
 class PublishableModel(models.Model):

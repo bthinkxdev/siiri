@@ -24,7 +24,7 @@ class ResetBrandContactTests(TestCase):
 
         self._run()
         site.refresh_from_db()
-        self.assertEqual(site.site_name, "SIRI COUTURE")
+        self.assertEqual(site.site_name, "SIIRI COUTURE")
         self.assertEqual(site.whatsapp_number, "")
         self.assertEqual(site.vendor_email, "")
         self.assertEqual(site.order_notification_email, "owner@example.com")

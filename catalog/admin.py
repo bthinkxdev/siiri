@@ -29,10 +29,11 @@ from catalog.models import (
 class CollectionAdmin(admin.ModelAdmin):
     """Admin for merchandising collections."""
 
-    list_display = ("name", "slug", "display_order", "is_active", "show_on_homepage", "updated_at")
+    list_display = ("name", "slug", "parent", "display_order", "is_active", "show_on_homepage", "updated_at")
     list_filter = ("is_active", "show_on_homepage")
     search_fields = ("name", "slug")
     prepopulated_fields = {"slug": ("name",)}
+    autocomplete_fields = ("parent",)
     ordering = ("display_order", "name")
 
 

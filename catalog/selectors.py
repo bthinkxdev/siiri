@@ -43,6 +43,8 @@ PLP_CARD_FIELDS: tuple[str, ...] = (
 HOMEPAGE_RAIL_LIMIT = 12
 SHOP_BY_CACHE_KEY = "catalog:shop_by:v1"
 SHOP_BY_TTL = 300
+NAV_COLLECTIONS_CACHE_KEY = "catalog:nav_collections:v1"
+NAV_COLLECTIONS_TTL = 300
 DEFAULT_CURRENCY_CACHE_KEY = "core:default_currency:v1"
 DEFAULT_CURRENCY_TTL = 300
 
@@ -224,7 +226,12 @@ def _apply_plp_filters(queryset: QuerySet[Product], filters: dict[str, Any]) -> 
     """Apply PLP filter dict to a base queryset."""
     needs_distinct = False
     if collection_id := filters.get("collection_id"):
-        queryset = queryset.filter(collections__id=collection_id)
+        #a parent collection's page also shows its children's products —
+        #products are tagged directly to whichever collection they belong
+        #to, with no automatic inheritance, so a parent with no directly
+        #tagged products would otherwise appear empty.
+        child_ids = Collection.objects.filter(parent_id=collection_id, is_active=True).values_list("pk", flat=True)
+        queryset = queryset.filter(collections__id__in=[collection_id, *child_ids])
         needs_distinct = True
     if style_id := filters.get("style_id"):
         queryset = queryset.filter(styles__id=style_id)
@@ -577,9 +584,36 @@ def get_shop_by_facets() -> dict[str, list]:
     return facets
 
 
+def get_nav_collections() -> list:
+    """
+    Top-level (parent) active collections with their active children
+    prefetched, for the primary nav — one nav item per parent, each with a
+    dropdown of its children plus a hero image.
+
+    Query guarantee: 2 queries; cached 5 minutes.
+    """
+    cached = cache.get(NAV_COLLECTIONS_CACHE_KEY)
+    if cached is not None:
+        return cached
+
+    collections = list(
+        Collection.objects.filter(is_active=True, parent__isnull=True)
+        .prefetch_related(
+            Prefetch(
+                "children",
+                queryset=Collection.objects.filter(is_active=True).order_by("display_order", "name"),
+            )
+        )
+        .order_by("display_order", "name")
+    )
+    cache.set(NAV_COLLECTIONS_CACHE_KEY, collections, NAV_COLLECTIONS_TTL)
+    return collections
+
+
 def invalidate_shop_by_cache() -> None:
-    """Clear cached "Shop By" facet lists after a taxonomy mutation."""
+    """Clear cached "Shop By" facet lists and nav collections after a taxonomy mutation."""
     cache.delete(SHOP_BY_CACHE_KEY)
+    cache.delete(NAV_COLLECTIONS_CACHE_KEY)
 
 
 def get_search_suggestions(*, query: str, limit: int = 8) -> dict[str, Any]:
@@ -650,7 +684,11 @@ def get_products_for_section_config(*, config: dict) -> list[Product]:
     if product_ids := config.get("product_ids"):
         qs = qs.filter(pk__in=product_ids)
     if collection_id := config.get("collection_id"):
-        qs = qs.filter(collections__id=collection_id).distinct()
+        #a parent collection's section also pulls in its children's products
+        #(see the matching comment in _apply_plp_filters) — consistent with
+        #every other collection-filtered surface on the site.
+        child_ids = Collection.objects.filter(parent_id=collection_id, is_active=True).values_list("pk", flat=True)
+        qs = qs.filter(collections__id__in=[collection_id, *child_ids]).distinct()
     if brand_id := config.get("brand_id"):
         qs = qs.filter(brand_id=brand_id)
     if min_price := config.get("min_price"):
