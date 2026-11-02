@@ -1,0 +1,56 @@
+{# Reusable image-upload control with preview/replace/delete, for ImageField form fields.
+   Usage: {% include "dashboard/partials/_image_field_upload.html" with field=form.logo slug="logo" %}
+   `slug` must be a unique, JS-id-safe string per field instance on the page. #}
+<label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+
+<div class="d-flex flex-wrap align-items-center gap-3 mt-1">
+  <div id="{{ slug }}-preview-container" class="border rounded p-1 bg-light" style="{% if not field.value %}display: none;{% endif %}">
+    <img id="{{ slug }}-preview-img" src="{% if field.value %}{{ field.value.url }}{% endif %}" alt="{{ field.label }}" style="height: 60px; max-width: 150px; object-fit: contain;">
+  </div>
+
+  <div class="d-flex flex-column gap-2">
+    <div>
+      <span id="{{ slug }}-filename" class="text-muted small fw-medium">
+        {% if field.value %}{{ field.value.name|cut:"site/" }}{% else %}No file chosen{% endif %}
+      </span>
+    </div>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-sm btn-outline-primary" onclick="document.getElementById('{{ field.id_for_label }}').click()">
+        {% if field.value %}Replace{% else %}Choose File{% endif %}
+      </button>
+
+      {% if field.value %}
+      <label id="{{ slug }}-delete-btn" class="btn btn-sm btn-outline-danger mb-0">
+        <input type="checkbox" name="{{ field.html_name }}-clear" id="{{ slug }}-clear_id" class="d-none"
+          data-original-filename="{{ field.value.name|cut:'site/' }}"
+          onchange="
+          if(this.checked) {
+            document.getElementById('{{ slug }}-preview-container').style.display='none';
+            document.getElementById('{{ slug }}-filename').innerText='Deleted (click Save to apply)';
+            document.getElementById('{{ field.id_for_label }}').value = '';
+          } else {
+            document.getElementById('{{ slug }}-preview-container').style.display='block';
+            document.getElementById('{{ slug }}-filename').innerText=this.getAttribute('data-original-filename');
+          }
+        "> Delete
+      </label>
+      {% endif %}
+    </div>
+  </div>
+
+  <input type="file" name="{{ field.html_name }}" id="{{ field.id_for_label }}" class="d-none" accept="image/*" onchange="
+    if(this.files && this.files[0]) {
+      document.getElementById('{{ slug }}-filename').innerText = this.files[0].name;
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('{{ slug }}-preview-img').src = e.target.result;
+        document.getElementById('{{ slug }}-preview-container').style.display = 'block';
+        var delBtn = document.getElementById('{{ slug }}-delete-btn');
+        if(delBtn) delBtn.style.display = 'none';
+        var clearCb = document.getElementById('{{ slug }}-clear_id');
+        if(clearCb) clearCb.checked = false;
+      }
+      reader.readAsDataURL(this.files[0]);
+    }
+  ">
+</div>

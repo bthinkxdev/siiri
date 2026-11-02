@@ -211,6 +211,13 @@ class SiteSettings(TimeStampedModel):
 
     site_name = models.CharField(max_length=120, default="SIIRI COUTURE")
     logo = models.ImageField(upload_to="site/", blank=True, null=True, verbose_name="Logo")
+    about_image = models.ImageField(
+        upload_to="site/",
+        blank=True,
+        null=True,
+        verbose_name="Store / About Image",
+        help_text="Shown on the About page hero and the homepage Store section. Leave blank to use the default placeholder.",
+    )
     primary_color = models.CharField(max_length=7, default="#0369A1")
     secondary_color = models.CharField(max_length=7, default="#0B1220")
     font_family = models.CharField(max_length=120, default="Inter, sans-serif")

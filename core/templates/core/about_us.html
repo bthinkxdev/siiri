@@ -5,7 +5,8 @@
 
 {% block content %}
 <div class="jm-about-hero">
-  <img src="{% static 'img/Siiri Couture Boutique Facade.png' %}" alt="{{ site_settings.site_name }}" class="jm-about-hero__img">
+  <img src="{% if site_settings.about_image %}{{ site_settings.about_image.url }}{% else %}{% static 'img/Siiri Couture Boutique Facade.png' %}{% endif %}"
+    alt="{{ site_settings.site_name }}" class="jm-about-hero__img">
 </div>
 
 <div class="container page-container jm-narrow py-4">
