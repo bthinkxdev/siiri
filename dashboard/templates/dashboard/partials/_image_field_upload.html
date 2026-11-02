@@ -1,6 +1,4 @@
-{# Reusable image-upload control with preview/replace/delete, for ImageField form fields.
-   Usage: {% include "dashboard/partials/_image_field_upload.html" with field=form.logo slug="logo" %}
-   `slug` must be a unique, JS-id-safe string per field instance on the page. #}
+{# Reusable image-upload control with preview/replace/delete. Pass field (a bound ImageField) and a unique slug. #}
 <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
 
 <div class="d-flex flex-wrap align-items-center gap-3 mt-1">
