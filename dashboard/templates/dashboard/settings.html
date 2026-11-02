@@ -23,16 +23,13 @@
               <p class="text-secondary small mb-0">Shown on product badges, PLP filters, homepage sections, and the "Shop By" nav — rename here and it updates everywhere.</p>
             </div>
             {% endif %}
-            {% if field.name == 'delivery_integration_enabled' %}
-            <div class="col-12 mt-3 mb-2">
-              <h5 class="border-bottom pb-2 fw-semibold text-dark">Feature Switches</h5>
-            </div>
-            {% endif %}
             <div class="{% if field.field.widget.input_type == 'checkbox' %}col-12{% else %}col-md-6{% endif %} mb-3">
               {% if field.name == 'logo' %}
                 {% include "dashboard/partials/_image_field_upload.html" with field=field slug="logo" %}
               {% elif field.name == 'about_image' %}
                 {% include "dashboard/partials/_image_field_upload.html" with field=field slug="about-image" %}
+              {% elif field.name == 'store_image' %}
+                {% include "dashboard/partials/_image_field_upload.html" with field=field slug="store-image" %}
               {% elif field.field.widget.input_type == 'checkbox' %}
               <div class="form-check mt-4">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>
               {% else %}

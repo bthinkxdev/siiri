@@ -906,6 +906,7 @@ class SiteSettingsForm(forms.ModelForm):
         "store_maps_url",
         "store_timings",
         "about_image",
+        "store_image",
         "vendor_email",
         "order_notification_email",
         "tax_rate_percent",
@@ -916,12 +917,6 @@ class SiteSettingsForm(forms.ModelForm):
         "featured_label",
         "bestseller_label",
         "new_arrival_label",
-        "delivery_integration_enabled",
-        "brands_enabled",
-        "subscriptions_enabled",
-        "rentals_enabled",
-        "gift_builder_enabled",
-        "newsletter_enabled",
     ]
 
     class Meta:
@@ -942,6 +937,7 @@ class SiteSettingsForm(forms.ModelForm):
             "store_maps_url",
             "store_timings",
             "about_image",
+            "store_image",
             "vendor_email",
             "order_notification_email",
             "tax_rate_percent",
@@ -951,12 +947,6 @@ class SiteSettingsForm(forms.ModelForm):
             "featured_label",
             "bestseller_label",
             "new_arrival_label",
-            "delivery_integration_enabled",
-            "brands_enabled",
-            "subscriptions_enabled",
-            "rentals_enabled",
-            "gift_builder_enabled",
-            "newsletter_enabled",
         ]
         labels = {
             "vendor_email": "Email",

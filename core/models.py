@@ -215,8 +215,15 @@ class SiteSettings(TimeStampedModel):
         upload_to="site/",
         blank=True,
         null=True,
-        verbose_name="Store / About Image",
-        help_text="Shown on the About page hero and the homepage Store section. Leave blank to use the default placeholder.",
+        verbose_name="About Us Image",
+        help_text="Shown on the About page hero. Leave blank to use the default placeholder.",
+    )
+    store_image = models.ImageField(
+        upload_to="site/",
+        blank=True,
+        null=True,
+        verbose_name="Shop / Store Image",
+        help_text="Shown in the homepage Store section. Leave blank to use the default placeholder.",
     )
     primary_color = models.CharField(max_length=7, default="#0369A1")
     secondary_color = models.CharField(max_length=7, default="#0B1220")
