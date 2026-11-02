@@ -562,6 +562,7 @@ class ProductImage(TimeStampedModel):
     image = models.ImageField(
         upload_to="products/images/",
         verbose_name="Image",
+        help_text="Use a 4:5 portrait ratio (e.g. 800×1000px) to match the product card and PDP gallery frame exactly — other ratios will be cropped to fill the frame.",
     )
     alt_text = models.CharField(
         max_length=255,

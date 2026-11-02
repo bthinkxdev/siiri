@@ -253,8 +253,9 @@ class PromoBanner(TimeStampedModel):
         blank=True,
         verbose_name="Photo",
         help_text=(
-            "Background photo. Tile: about 1200x600 (2:1). Wide: about 2400x480 (5:1). "
-            "Without a photo a solid maroon panel is shown."
+            "Background photo — cropped to fill the frame, so match the ratio closely. "
+            "Tile: about 1200x600 (2:1). Wide: about 2400x480 (5:1). "
+            "Without a photo a solid gold panel is shown instead."
         ),
     )
     display_order = models.PositiveIntegerField(
