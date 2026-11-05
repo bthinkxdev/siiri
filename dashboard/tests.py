@@ -16,7 +16,7 @@ from catalog.models import Product
 from checkout.services import create_checkout_session, place_order
 from core.models import Currency
 from dashboard.forms import ProductVariantForm, ProductVariantFormSet
-from orders.models import Order, OrderStatus
+from orders.models import Order, OrderItem, OrderStatus
 from payments.models import PaymentStatus, PaymentTransaction
 from payments.services import confirm_payment_success
 
@@ -634,3 +634,47 @@ class SkuUniqueAcrossProductsTests(TestCase):
         response = self._post(reverse("dashboard:product-update", args=[self.simple.pk]), sku="SIMPLE-1",
                               extra={"name": "Simple Saree (renamed)"})
         self.assertRedirects(response, reverse("dashboard:product-list"))
+
+
+class ProductDeleteForceThroughOrdersTests(TestCase):
+    """Deleting a product from the dashboard must succeed even when it has
+    order history — by deleting the referencing order(s) too (an explicit,
+    confirmed, destructive staff action; see catalog.services.delete_product_with_orders).
+    Direct ORM .delete() stays PROTECT-blocked (see catalog.tests)."""
+
+    def setUp(self) -> None:
+        self.staff_user = User.objects.create_superuser(
+            username="del-admin", email="del-admin@example.com", password="testpass12345"
+        )
+        self.client.force_login(self.staff_user)
+
+        self.currency, _ = Currency.objects.get_or_create(
+            code="INR",
+            defaults={"symbol": "₹", "exchange_rate_to_base": "1.00000000", "is_default": True},
+        )
+        self.profile = register_customer_email(
+            email="del-order-test@example.com", password="testpass12345", name="Del Order Test"
+        )
+        self.product = Product.objects.create(
+            name="Deletable Saree", slug="deletable-saree", sku="SKU-DEL-1",
+            base_price="200.00", mrp="200.00", purchase_price="120.00",
+        )
+        self.order = Order.objects.create(
+            customer_profile=self.profile,
+            order_number="#DEL-1",
+            idempotency_key="del-1",
+            order_status=OrderStatus.PLACED_COD,
+            subtotal="200.00",
+            total_amount="200.00",
+            currency=self.currency,
+        )
+        OrderItem.objects.create(
+            order=self.order, product=self.product, variant=None,
+            quantity=1, unit_price="200.00",
+        )
+
+    def test_delete_view_removes_product_and_its_orders(self) -> None:
+        response = self.client.post(reverse("dashboard:product-delete", args=[self.product.pk]))
+        self.assertRedirects(response, reverse("dashboard:product-list"))
+        self.assertFalse(Product.objects.filter(pk=self.product.pk).exists())
+        self.assertFalse(Order.objects.filter(pk=self.order.pk).exists())

@@ -18,6 +18,53 @@ from catalog.models import (
 
 
 @transaction.atomic
+def delete_product_with_orders(*, product: Product) -> int:
+    """
+    Force-delete a product even if it has order history, by deleting every
+    order that references it (directly or through one of its variants) first.
+
+    DESTRUCTIVE: this permanently removes real order records — line items,
+    status history, and payment transactions all cascade-delete with the
+    order. There is no snapshot/undo. Only call this from an explicit,
+    confirmed staff action (see dashboard.views.catalog.ProductDeleteView).
+
+    Returns the number of orders deleted.
+    """
+    from django.db.models import Q
+    from orders.models import Order, OrderItem
+
+    order_ids = list(
+        OrderItem.objects.filter(Q(product=product) | Q(variant__product=product))
+        .values_list("order_id", flat=True)
+        .distinct()
+    )
+    if order_ids:
+        Order.objects.filter(pk__in=order_ids).delete()
+    product.delete()
+    return len(order_ids)
+
+
+@transaction.atomic
+def delete_variant_with_orders(*, variant: ProductVariant) -> int:
+    """
+    Force-delete a product variant even if it has order history, by deleting
+    every order that references it first. Same destructive trade-off as
+    delete_product_with_orders — see that docstring.
+
+    Returns the number of orders deleted.
+    """
+    from orders.models import Order, OrderItem
+
+    order_ids = list(
+        OrderItem.objects.filter(variant=variant).values_list("order_id", flat=True).distinct()
+    )
+    if order_ids:
+        Order.objects.filter(pk__in=order_ids).delete()
+    variant.delete()
+    return len(order_ids)
+
+
+@transaction.atomic
 def adjust_stock(
     *,
     target: Union[Product, ProductVariant],

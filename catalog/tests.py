@@ -101,6 +101,35 @@ class ProductVariantDeleteProtectionTests(TestCase):
         with self.assertRaises(ProtectedError):
             self.variant.delete()
 
+    def test_force_delete_variant_also_deletes_the_referencing_order(self) -> None:
+        from catalog.services import delete_variant_with_orders
+
+        order_id = OrderItem.objects.get(variant=self.variant).order_id
+        deleted_count = delete_variant_with_orders(variant=self.variant)
+        self.assertEqual(deleted_count, 1)
+        self.assertFalse(ProductVariant.objects.filter(pk=self.variant.pk).exists())
+        self.assertFalse(Order.objects.filter(pk=order_id).exists())
+
+    def test_force_delete_product_also_deletes_orders_through_its_variant(self) -> None:
+        from catalog.services import delete_product_with_orders
+
+        order_id = OrderItem.objects.get(variant=self.variant).order_id
+        deleted_count = delete_product_with_orders(product=self.product)
+        self.assertEqual(deleted_count, 1)
+        self.assertFalse(Product.objects.filter(pk=self.product.pk).exists())
+        self.assertFalse(Order.objects.filter(pk=order_id).exists())
+
+    def test_force_delete_product_with_no_orders_is_a_plain_delete(self) -> None:
+        from catalog.services import delete_product_with_orders
+
+        unrelated_product = Product.objects.create(
+            name="No Orders Yarn", slug="no-orders-yarn", sku="SKU-NOORDERS-1",
+            base_price="50.00", mrp="50.00", purchase_price="30.00",
+        )
+        deleted_count = delete_product_with_orders(product=unrelated_product)
+        self.assertEqual(deleted_count, 0)
+        self.assertFalse(Product.objects.filter(pk=unrelated_product.pk).exists())
+
 
 class MultiVariantTypeGroupingTests(TestCase):
     """SIRI-HOM-005: a product with more than one variant_type (e.g. Size AND Qty)

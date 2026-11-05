@@ -146,6 +146,22 @@ class ProductDeleteView(DashboardDeleteView):
     url_basename = "product"
     singular_name = "Product"
 
+    def form_valid(self, form):
+        from catalog.services import delete_product_with_orders
+
+        product = self.object
+        obj_name = str(product)
+        orders_deleted = delete_product_with_orders(product=product)
+        if orders_deleted:
+            messages.success(
+                self.request,
+                f"'{obj_name}' deleted, along with {orders_deleted} order(s) that referenced it.",
+            )
+        else:
+            messages.success(self.request, f"'{obj_name}' deleted.")
+        from django.http import HttpResponseRedirect
+        return HttpResponseRedirect(self.get_success_url())
+
 
 def _render_product_form(request, product, mode):
     if request.method == "POST":
@@ -188,10 +204,22 @@ def _render_product_form(request, product, mode):
                     form_valid = False
 
         if form_valid and variants_valid and images_valid and specifications_valid:
+            orders_deleted_for_variants = 0
             try:
                 with transaction.atomic():
                     product = form.save()
                     variants.instance = product
+                    #a variant marked for deletion that's referenced by an order
+                    #would otherwise block the whole formset save (PROTECT) —
+                    #force it through by deleting those orders first. Deleting
+                    #here (rather than relying on variants.save()'s own delete
+                    #step) is safe: Model.delete() clears the instance's pk,
+                    #and save_existing_objects() skips any deleted-form whose
+                    #instance.pk is already None.
+                    from catalog.services import delete_variant_with_orders
+                    for vform in variants.deleted_forms:
+                        if vform.instance.pk:
+                            orders_deleted_for_variants += delete_variant_with_orders(variant=vform.instance)
                     variants.save()
 
                     if product.variants.exists():
@@ -216,15 +244,22 @@ def _render_product_form(request, product, mode):
             except ProtectedError:
                 messages.error(
                     request,
-                    "Cannot delete a variant that is included in an order. "
-                    "Mark it out of stock instead, or remove it from the order first."
+                    "Could not save this product because of a reference this form doesn't "
+                    "know how to clear automatically. Please contact support."
                 )
                 return redirect("dashboard:product-list")
 
             form.discard_used_pending_uploads()
             for iform in images.forms:
                 iform.discard_used_pending_uploads()
-            messages.success(request, f"Product '{product.name}' saved successfully.")
+            if orders_deleted_for_variants:
+                messages.success(
+                    request,
+                    f"Product '{product.name}' saved. {orders_deleted_for_variants} order(s) referencing a "
+                    "removed variant were deleted along with it.",
+                )
+            else:
+                messages.success(request, f"Product '{product.name}' saved successfully.")
             return redirect("dashboard:product-list")
 
         
