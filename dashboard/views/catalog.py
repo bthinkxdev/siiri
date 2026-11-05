@@ -196,7 +196,6 @@ def _render_product_form(request, product, mode):
             for field, label in (
                 ("base_price", "Base price"),
                 ("mrp", "MRP"),
-                ("purchase_price", "Purchase price"),
                 ("stock_quantity", "Stock quantity"),
             ):
                 if form.data.get(form.add_prefix(field)) in (None, ""):

@@ -223,7 +223,7 @@
             <div class="col-md-4">{% include "dashboard/partials/_field.html" with field=form.size_chart %}</div>
             <div class="col-md-3">{% include "dashboard/partials/_field.html" with field=form.base_price force_required=True %}</div>
             <div class="col-md-3">{% include "dashboard/partials/_field.html" with field=form.mrp force_required=True %}</div>
-            <div class="col-md-3">{% include "dashboard/partials/_field.html" with field=form.purchase_price force_required=True %}</div>
+            <div class="col-md-3">{% include "dashboard/partials/_field.html" with field=form.purchase_price %}</div>
             <div class="col-md-3">{% include "dashboard/partials/_field.html" with field=form.color %}</div>
           </div>
         </div>
@@ -299,7 +299,7 @@
                   <th>Name <span class="text-danger">*</span></th>
                   <th>Base Price <span class="text-danger">*</span></th>
                   <th>MRP <span class="text-danger">*</span></th>
-                  <th>Purchase Price <span class="text-danger">*</span></th>
+                  <th>Purchase Price</th>
                   <th>SKU suffix</th>
                   <th>Stock <span class="text-danger">*</span></th>
                   <th>Threshold <span class="text-danger">*</span></th>
@@ -645,8 +645,8 @@ document.addEventListener("DOMContentLoaded", function() {
       if (mrpCol) mrpCol.style.display = 'none';
       if (purchasePriceCol) purchasePriceCol.style.display = 'none';
       if (inventoryCard) inventoryCard.style.display = 'none';
-      
-      // remove required attributes 
+
+      // remove required attributes
       if (basePriceInput) basePriceInput.required = false;
       if (mrpInput) mrpInput.required = false;
       if (purchasePriceInput) purchasePriceInput.required = false;
@@ -657,10 +657,10 @@ document.addEventListener("DOMContentLoaded", function() {
       if (mrpCol) mrpCol.style.display = '';
       if (purchasePriceCol) purchasePriceCol.style.display = '';
       if (inventoryCard) inventoryCard.style.display = '';
-      
+
       if (basePriceInput) basePriceInput.required = true;
       if (mrpInput) mrpInput.required = true;
-      if (purchasePriceInput) purchasePriceInput.required = true;
+      if (purchasePriceInput) purchasePriceInput.required = false;
       if (stockInput) stockInput.required = true;
       if (thresholdInput) thresholdInput.required = true;
     }

@@ -57,6 +57,21 @@ def get_product_display_price(*, product: Product) -> Decimal:
     return sale["price"]
 
 
+def _out_of_stock_last_key():
+    """
+    Sort key that pushes out-of-stock products (stock_quantity <= 0) to the
+    end of any listing, ahead of whatever ordering follows it. Product.stock_quantity
+    is kept in sync with the sum of its variants' stock by ProductVariant.save()
+    (see catalog/models.py), so this one field is reliable for both simple
+    and variant-based products.
+    """
+    return Case(
+        When(stock_quantity__lte=0, then=Value(1)),
+        default=Value(0),
+        output_field=IntegerField(),
+    )
+
+
 def _primary_image_prefetch() -> Prefetch:
     """
     Prefetch images ordered by primary status and display order.
@@ -98,8 +113,9 @@ def _homepage_rail_queryset(*, filters: Q, ordering: tuple = ("-created_at",)) -
         .annotate(
             average_rating=Avg("reviews__rating", filter=approved),
             review_count=Count("reviews", filter=approved),
+            _out_of_stock=_out_of_stock_last_key(),
         )
-        .order_by(*ordering)[:HOMEPAGE_RAIL_LIMIT]
+        .order_by("_out_of_stock", *ordering)[:HOMEPAGE_RAIL_LIMIT]
     )
 
 
@@ -159,8 +175,10 @@ def get_products_by_collection_slug(slug: str, limit: int | None = None) -> list
         .annotate(
             average_rating=Avg("reviews__rating", filter=approved),
             review_count=Count("reviews", filter=approved),
+            _out_of_stock=_out_of_stock_last_key(),
         )
         .order_by(
+            "_out_of_stock",
             Case(
                 When(homepage_featured__is_shown=True, then=Value(1)),
                 When(homepage_featured__is_shown=False, then=Value(-1)),
@@ -293,14 +311,17 @@ def _apply_plp_sort(queryset: QuerySet[Product], sort: str) -> QuerySet[Product]
     Apply PLP sort key to queryset.
 
     """
+    queryset = queryset.annotate(_out_of_stock=_out_of_stock_last_key())
+
     if sort in PLP_SORT_FIELDS:
         field = PLP_SORT_FIELDS[sort]
         if field == "-average_rating":
-            return queryset.order_by(F("average_rating").desc(nulls_last=True), "-created_at", "-pk")
+            return queryset.order_by("_out_of_stock", F("average_rating").desc(nulls_last=True), "-created_at", "-pk")
         #"-pk" tiebreaker keeps pagination stable when many products share a price.
-        return queryset.order_by(field, "-pk")
+        return queryset.order_by("_out_of_stock", field, "-pk")
 
     return queryset.order_by(
+        "_out_of_stock",
         Case(
             When(homepage_featured__is_shown=True, then=Value(1)),
             When(homepage_featured__is_shown=False, then=Value(-1)),
@@ -701,7 +722,8 @@ def get_products_for_section_config(*, config: dict) -> list[Product]:
         qs.select_related("brand")
         .prefetch_related(_primary_image_prefetch(), _variants_prefetch())
         .only(*PLP_CARD_FIELDS)
-        .order_by("-created_at")[:limit]
+        .annotate(_out_of_stock=_out_of_stock_last_key())
+        .order_by("_out_of_stock", "-created_at")[:limit]
     )
 
 
@@ -879,6 +901,11 @@ def get_related_products(*, product: Product, user: Optional[Any] = None, limit:
             .only(*PLP_CARD_FIELDS)[:needed]
         )
         products.extend(list(fallback_products))
+
+    #out-of-stock products sink to the end, same rule as every other listing
+    #section — Python's sort is stable, so relative order within each group
+    #(explicit relations, then same-collection, then fallback) is preserved.
+    products.sort(key=lambda p: 1 if p.stock_quantity <= 0 else 0)
 
     from marketing.selectors import get_flash_sale_discounts_for_products
 

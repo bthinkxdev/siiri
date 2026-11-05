@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+from decimal import Decimal
 
 from django import forms
 
@@ -166,7 +167,6 @@ class ProductForm(PendingUploadMixin, SlugAutoMixin):
         for name, label in (
             ("base_price", "Base price"),
             ("mrp", "MRP"),
-            ("purchase_price", "Purchase price"),
             ("stock_quantity", "Stock quantity"),
         ):
             self.fields[name].widget.attrs["data-required-msg"] = (
@@ -306,14 +306,19 @@ class ProductVariantForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
+        self.fields["purchase_price"].required = False
+
         for name, field in self.fields.items():
             if field.required and name in self.Meta.error_messages:
                 field.widget.attrs["data-required-msg"] = self.Meta.error_messages[name]["required"]
         if not self.instance.pk:
-            
+
             for name in ("base_price", "mrp", "purchase_price"):
                 self.initial[name] = None
+
+    def clean_purchase_price(self):
+        value = self.cleaned_data.get("purchase_price")
+        return value if value is not None else Decimal("0")
 
     def has_changed(self):
         """

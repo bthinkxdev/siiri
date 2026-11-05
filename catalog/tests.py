@@ -213,3 +213,47 @@ class PdpVariantSkuTests(TestCase):
         from django.urls import reverse
         html = self.client.get(reverse("catalog:pdp", kwargs={"slug": self.product.slug}), {"variant_id": self.m.pk}).content.decode()
         self.assertIn('<span id="pdp-sku-value">M</span>', html)
+
+
+class OutOfStockSortsLastTests(TestCase):
+    """An out-of-stock product must sink to the end of every listing
+    (PLP, homepage rails, collection pages, related products) rather than
+    sitting among in-stock products in its normal sort position."""
+
+    def setUp(self) -> None:
+        #created first (oldest) but IN stock — would normally sort last by
+        #"-created_at", proving out-of-stock placement isn't just date luck.
+        self.in_stock_old = Product.objects.create(
+            name="In Stock Old", slug="in-stock-old", sku="SKU-OOS-1",
+            base_price="100.00", mrp="100.00", purchase_price="60.00", stock_quantity=10,
+        )
+        self.out_of_stock_new = Product.objects.create(
+            name="Out Of Stock New", slug="out-of-stock-new", sku="SKU-OOS-2",
+            base_price="100.00", mrp="100.00", purchase_price="60.00", stock_quantity=0,
+        )
+        self.in_stock_new = Product.objects.create(
+            name="In Stock New", slug="in-stock-new", sku="SKU-OOS-3",
+            base_price="100.00", mrp="100.00", purchase_price="60.00", stock_quantity=5,
+        )
+
+    def test_plp_default_order_pushes_out_of_stock_last(self) -> None:
+        from catalog.selectors import get_plp_products
+        results = get_plp_products(filters={})["results"]
+        slugs = [p.slug for p in results]
+        self.assertLess(slugs.index("in-stock-new"), slugs.index("out-of-stock-new"))
+        self.assertLess(slugs.index("in-stock-old"), slugs.index("out-of-stock-new"))
+
+    def test_plp_explicit_sort_still_pushes_out_of_stock_last(self) -> None:
+        from catalog.selectors import get_plp_products
+        results = get_plp_products(filters={}, sort="price_asc")["results"]
+        slugs = [p.slug for p in results]
+        self.assertEqual(slugs[-1], "out-of-stock-new")
+
+    def test_homepage_rail_pushes_out_of_stock_last(self) -> None:
+        from catalog.selectors import get_homepage_product_rails
+        for p in (self.in_stock_old, self.out_of_stock_new, self.in_stock_new):
+            p.is_new_arrival = True
+            p.save(update_fields=["is_new_arrival"])
+        rails = get_homepage_product_rails()
+        slugs = [p.slug for p in rails["new_arrivals"]]
+        self.assertLess(slugs.index("in-stock-new"), slugs.index("out-of-stock-new"))

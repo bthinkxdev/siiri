@@ -262,8 +262,9 @@ class ProductFormRequiredPriceGateTests(TestCase):
     """
     ProductForm.clean() silently defaults blank base_price/mrp/purchase_price/
     stock_quantity to 0 — fine when a variant will drive those fields, but a
-    variant-less product must actually require them, matching the form's own
-    (previously dead) error_messages.
+    variant-less product must actually require base_price/mrp/stock_quantity,
+    matching the form's own (previously dead) error_messages. purchase_price
+    is always optional (internal cost basis, not needed to list a product).
     """
 
     def setUp(self) -> None:
@@ -305,7 +306,6 @@ class ProductFormRequiredPriceGateTests(TestCase):
         for field_id, message in (
             ("id_base_price", "Base price is required when the product has no variants."),
             ("id_mrp", "MRP is required when the product has no variants."),
-            ("id_purchase_price", "Purchase price is required when the product has no variants."),
         ):
             self.assertIn(f'href="#{field_id}"', body)
             self.assertIn(message, body)
@@ -327,18 +327,19 @@ class ProductFormRequiredPriceGateTests(TestCase):
             ("variant_type", "Variant type is required."),
             ("base_price", "Base price is required."),
             ("mrp", "MRP is required."),
-            ("purchase_price", "Purchase price is required."),
             ("stock_quantity", "Stock quantity is required."),
             ("low_stock_threshold", "Low stock threshold is required."),
         ):
             self.assertRegex(body, rf'id="id_variants-0-{field}">\s*<div class="text-danger small mt-1">{message}</div>')
+        self.assertNotRegex(body, r'id="id_variants-0-purchase_price">\s*<div class="text-danger small mt-1">')
         self.assertNotIn('mt-1">Base price is required when the product has no variants.', body)
         self.assertIn('id="product-form-errors"', body)
 
     def test_required_markers_on_variant_columns_and_inputs(self) -> None:
         body = self.client.get(reverse("dashboard:product-create")).content.decode()
-        for header in ("Type", "Name", "Base Price", "MRP", "Purchase Price", "Stock", "Threshold"):
+        for header in ("Type", "Name", "Base Price", "MRP", "Stock", "Threshold"):
             self.assertIn(f'<th>{header} <span class="text-danger">*</span></th>', body)
+        self.assertIn('<th>Purchase Price</th>', body)
         self.assertIn('[data-formset="variants"] tbody[data-formset-body] tr', body)
         self.assertNotRegex(body, r'<input[^>]*name="variants-__prefix__-base_price"[^>]*value=')
         self.assertIn('name="variants-__prefix__-base_price"', body)
@@ -347,8 +348,10 @@ class ProductFormRequiredPriceGateTests(TestCase):
 
     def test_conditionally_required_fields_show_asterisk(self) -> None:
         body = self.client.get(reverse("dashboard:product-create")).content.decode()
-        for field_id in ("id_base_price", "id_mrp", "id_purchase_price", "id_stock_quantity"):
+        for field_id in ("id_base_price", "id_mrp", "id_stock_quantity"):
             self.assertRegex(body, rf'for="{field_id}">[^<]*<span class="text-danger">\*</span>')
+        #purchase price is optional — no asterisk, ever
+        self.assertNotRegex(body, r'for="id_purchase_price">[^<]*<span class="text-danger">\*</span>')
         self.assertNotIn('id="product-form-errors"', body)
 
     def test_no_variants_with_prices_is_accepted(self) -> None:
