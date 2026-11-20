@@ -7214,14 +7214,6 @@ body.jm-body .hm-hero__title {
   object-position: right center;
 }
 
-.hm-tile:not(.hm-tile--plain)::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(90deg, rgba(26, 10, 8, 0.75) 0%, rgba(26, 10, 8, 0.45) 38%, rgba(26, 10, 8, 0.15) 62%, rgba(26, 10, 8, 0) 82%);
-}
-
 .hm-tile__body {
   max-width: 62%;
   padding: clamp(14px, 3.4vw, 52px);
