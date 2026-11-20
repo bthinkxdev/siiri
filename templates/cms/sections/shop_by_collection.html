@@ -1,6 +1,6 @@
 {% load i18n static %}
 {% if section_context.collections %}
-<section class="hm-circles" id="jm-collections" data-circles aria-label="{% trans 'Shop by collection' %}">
+<section class="hm-circles{% if section_context.collections|length == 2 %} hm-circles--pair{% endif %}" id="jm-collections" data-circles aria-label="{% trans 'Shop by collection' %}">
   <div class="hm-wrap hm-circles__stage">
     <button type="button" class="hm-mem__arrow hm-mem__arrow--prev" data-circles-prev aria-label="{% trans 'Previous collections' %}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
@@ -14,6 +14,7 @@
                  alt="" width="120" height="120" loading="lazy" decoding="async">
           </span>
           <span class="hm-circle__label">{{ collection.name }}</span>
+          <span class="hm-circle__sub">{% trans "Collection" %}</span>
         </a>
       </li>
       {% endfor %}

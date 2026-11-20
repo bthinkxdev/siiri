@@ -7178,6 +7178,62 @@ body.jm-body .hm-hero__title {
   }
 }
 
+/* Exactly two collections on mobile: two large cards filling the screen width */
+.hm-circle__sub {
+  display: none;
+}
+
+@media (max-width: 767.98px) {
+  .hm-circles--pair .hm-circles__row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 4px 0 14px;
+    overflow: visible;
+  }
+
+  .hm-circles--pair .hm-circles__slot {
+    flex: none;
+    margin: 0;
+  }
+
+  .hm-circles--pair .hm-circle {
+    height: 100%;
+    gap: 0;
+    padding-bottom: 14px;
+    overflow: hidden;
+    border: 1px solid var(--jm-border-light);
+    border-radius: var(--jm-radius-lg);
+    background: var(--jm-surface);
+    box-shadow: 0 10px 24px -14px rgba(26, 10, 8, 0.25);
+  }
+
+  .hm-circles--pair .hm-circle__photo {
+    width: 100%;
+    aspect-ratio: 1 / 0.9;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .hm-circles--pair .hm-circle__label {
+    margin-top: 12px;
+    padding-inline: 8px;
+    font-size: 0.95rem;
+    letter-spacing: 0.06em;
+  }
+
+  .hm-circles--pair .hm-circle__sub {
+    display: block;
+    margin-top: 4px;
+    font-family: var(--font-sans);
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--jm-slate);
+  }
+}
+
 /* ---------- Promo tiles ---------- */
 .hm-tiles {
   padding-top: clamp(16px, 3.2vw, 48px);
