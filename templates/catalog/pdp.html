@@ -44,12 +44,10 @@
         </p>
         <span class="jm-pdp-buybox__discount" id="pdp-discount-badge" data-off-label="{% trans 'OFF' %}" {% if not discount_percent %}style="display: none;"{% endif %}>{% if discount_percent %}{{ discount_percent }}% {% trans "OFF" %}{% endif %}</span>
       </div>
-      <p class="jm-pdp-buybox__stock {% if not price_data.is_in_stock %}is-out{% elif price_data.stock_quantity <= price_data.low_stock_threshold %}is-low{% else %}is-in{% endif %}"
+      <p class="jm-pdp-buybox__stock {% if not price_data.is_in_stock %}is-out{% else %}is-in{% endif %}"
         id="pdp-stock-text">
         {% if not price_data.is_in_stock %}
         {% trans "Out of stock" %}
-        {% elif price_data.stock_quantity <= price_data.low_stock_threshold %}
-        Only {{ price_data.stock_quantity }} left
         {% else %}
         {% trans "In stock" %}
         {% endif %}

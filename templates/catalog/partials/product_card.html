@@ -1,10 +1,10 @@
 {% load i18n static storefront_tags %}
 {% with display_variant=product.display_variant %}
-{% with eff_stock=display_variant.stock_quantity|default_if_none:product.stock_quantity eff_thresh=display_variant.low_stock_threshold|default_if_none:product.low_stock_threshold eff_price=product.display_price|default:product.effective_base_price eff_base=product.effective_base_price eff_mrp=product.effective_mrp %}
+{% with eff_stock=display_variant.stock_quantity|default_if_none:product.stock_quantity eff_price=product.display_price|default:product.effective_base_price eff_base=product.effective_base_price eff_mrp=product.effective_mrp %}
 <article class="jm-product-card card h-100" data-product-id="{{ product.pk }}" data-product-name="{{ product.name }}"
   data-product-url="{% url 'catalog:pdp' slug=product.slug %}"
   data-product-price="{% money_label eff_price display_currency %}"
-  data-product-stock="{% if eff_stock <= 0 %}{% trans 'Out of Stock' %}{% elif eff_stock <= eff_thresh %}{% blocktrans with count=eff_stock %}Only {{ count }} left{% endblocktrans %}{% else %}{% trans 'In Stock' %}{% endif %}"
+  data-product-stock="{% if eff_stock <= 0 %}{% trans 'Out of Stock' %}{% else %}{% trans 'In Stock' %}{% endif %}"
   data-product-badge="{% if product.is_featured %}{{ site_settings.featured_label }}{% elif product.is_bestseller %}{{ site_settings.bestseller_label }}{% elif product.is_new_arrival %}{{ site_settings.new_arrival_label }}{% endif %}"
   {% with img=product.primary_images.0 %}
   data-product-image="{% if img and img.image %}{{ img.image.url }}{% else %}{% static 'img/product-placeholder.svg' %}{% endif %}"
@@ -45,12 +45,6 @@
       <span class="product-badge product-badge--express">{{ site_settings.bestseller_label }}</span>
       {% elif force_badge == 'new' %}
       <span class="product-badge product-badge--new">{{ site_settings.new_arrival_label }}</span>
-      {% endif %}
-
-      {% if eff_stock <= 0 %}
-      <span class="product-badge product-badge--out">{% trans "Out of Stock" %}</span>
-      {% elif eff_stock <= eff_thresh %}
-      <span class="product-badge product-badge--low">{% blocktrans with count=eff_stock %}Only {{ count }} left{% endblocktrans %}</span>
       {% endif %}
     </div>
 

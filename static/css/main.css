@@ -914,16 +914,6 @@ body.mobile-search-open {
   color: #fff;
 }
 
-.product-badge--out {
-  background: #dc2626;
-  color: #fff;
-}
-
-.product-badge--low {
-  background: #f97316;
-  color: #fff;
-}
-
 
 .chip-scroll {
   display: flex;
@@ -4131,11 +4121,6 @@ body.mobile-search-open .jm-wa-float {
 .jm-pdp-buybox__stock.is-in,
 .jm-qv__stock.is-in {
   color: var(--jm-success);
-}
-
-.jm-pdp-buybox__stock.is-low,
-.jm-qv__stock.is-low {
-  color: #f97316 !important;
 }
 
 .jm-pdp-buybox__stock.is-out,
@@ -8220,16 +8205,6 @@ body.jm-body .product-badge--express {
 
 body.jm-body .product-badge--flash {
   background: var(--jm-accent);
-  color: #fff;
-}
-
-body.jm-body .product-badge--out {
-  background: #dc2626;
-  color: #fff;
-}
-
-body.jm-body .product-badge--low {
-  background: #f97316;
   color: #fff;
 }
 

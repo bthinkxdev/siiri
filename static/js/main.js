@@ -655,7 +655,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (checkedRadio && checkedRadio.dataset.stock !== undefined && checkedRadio.dataset.stock !== '') {
       var st = parseInt(checkedRadio.dataset.stock, 10);
-      var th = parseInt(checkedRadio.dataset.thresh || '5', 10);
       isOut = st <= 0;
       if (qvQtyInput) {
         qvQtyInput.setAttribute('data-max-stock', String(st));
@@ -672,9 +671,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isOut) {
           stockEl.textContent = 'Out of Stock';
           stockEl.className = 'jm-qv__stock is-out';
-        } else if (st <= th) {
-          stockEl.textContent = 'Only ' + st + ' left';
-          stockEl.className = 'jm-qv__stock is-low';
         } else {
           stockEl.innerHTML = 'In Stock';
           stockEl.className = 'jm-qv__stock is-in';
@@ -722,9 +718,6 @@ document.addEventListener('DOMContentLoaded', () => {
           if (outOfStock) {
             stockEl.textContent = 'Out of Stock';
             stockEl.className = 'jm-qv__stock is-out';
-          } else if (data.stock_quantity !== undefined && data.low_stock_threshold !== undefined && data.stock_quantity <= data.low_stock_threshold) {
-            stockEl.textContent = 'Only ' + data.stock_quantity + ' left';
-            stockEl.className = 'jm-qv__stock is-low';
           } else {
             stockEl.innerHTML = 'In Stock';
             stockEl.className = 'jm-qv__stock is-in';
@@ -780,9 +773,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (stock) {
       stock.innerHTML = card.dataset.productStock || '';
       var cardStockEl = card.querySelector('.jm-product-card__stock');
-      if (cardStockEl && cardStockEl.classList.contains('is-low')) {
-        stock.className = 'jm-qv__stock is-low';
-      } else if (isOut || (cardStockEl && cardStockEl.classList.contains('is-out'))) {
+      if (isOut || (cardStockEl && cardStockEl.classList.contains('is-out'))) {
         stock.className = 'jm-qv__stock is-out';
       } else {
         stock.className = 'jm-qv__stock is-in';
@@ -859,7 +850,6 @@ document.addEventListener('DOMContentLoaded', () => {
           radio.dataset.mrp = v.mrp || '';
           radio.dataset.discount = v.discount || '0';
           radio.dataset.stock = String(v.stock !== undefined ? v.stock : 0);
-          radio.dataset.thresh = String(v.thresh !== undefined ? v.thresh : 5);
           if (vidStr === selectedVid) {
             radio.checked = true;
           }
@@ -1116,7 +1106,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (checkedRadio && checkedRadio.dataset.stock !== undefined && checkedRadio.dataset.stock !== '') {
       var st = parseInt(checkedRadio.dataset.stock, 10);
-      var th = parseInt(checkedRadio.dataset.thresh || '5', 10);
       isOut = st <= 0;
       if (qtyInput) {
         qtyInput.setAttribute('data-max-stock', String(st));
@@ -1132,9 +1121,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isOut) {
           stockEl.textContent = 'Out of Stock';
           stockEl.className = 'jm-atc__stock is-out text-danger';
-        } else if (st <= th) {
-          stockEl.textContent = 'Only ' + st + ' left';
-          stockEl.className = 'jm-atc__stock is-low text-warning';
         } else {
           stockEl.innerHTML = 'In Stock';
           stockEl.className = 'jm-atc__stock is-in text-success';
@@ -1239,9 +1225,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (stock) {
       stock.innerHTML = card.dataset.productStock || '';
       var cardStockEl = card.querySelector('.jm-product-card__stock');
-      if (cardStockEl && cardStockEl.classList.contains('is-low')) {
-        stock.className = 'jm-atc__stock is-low text-warning';
-      } else if (isOut || (cardStockEl && cardStockEl.classList.contains('is-out'))) {
+      if (isOut || (cardStockEl && cardStockEl.classList.contains('is-out'))) {
         stock.className = 'jm-atc__stock is-out text-danger';
       } else {
         stock.className = 'jm-atc__stock is-in text-success';
@@ -1302,7 +1286,6 @@ document.addEventListener('DOMContentLoaded', () => {
           radio.dataset.mrp = v.mrp || '';
           radio.dataset.discount = v.discount || '0';
           radio.dataset.stock = String(v.stock !== undefined ? v.stock : 0);
-          radio.dataset.thresh = String(v.thresh !== undefined ? v.thresh : 5);
           if (vidStr === selectedVid) {
             radio.checked = true;
           }
