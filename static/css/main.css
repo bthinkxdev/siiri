@@ -3777,12 +3777,35 @@ body.mobile-search-open .jm-wa-float {
   }
 }
 
-/* 4+ products: split evenly across two rows (fills column by column, still scrolls sideways) */
-.jm-rail-section .jm-product-rail__track.product-rail-scroll--two-rows {
+/* Homepage product sections: wrapping grid — 2 per row on mobile, 4 on laptop/desktop */
+.jm-rail-section .jm-product-rail__track.jm-rail-grid {
   display: grid;
-  grid-template-rows: repeat(2, auto);
-  grid-auto-flow: column;
-  grid-auto-columns: var(--jm-rail-card-w);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  padding: 0.35rem 0 0.75rem;
+}
+
+.jm-rail-section .jm-product-rail__track.jm-rail-grid .product-rail-item {
+  width: auto;
+  max-width: none;
+}
+
+@media (min-width: 768px) {
+  .jm-rail-section .jm-product-rail__track.jm-rail-grid {
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 992px) {
+  .jm-rail-section .jm-product-rail__track.jm-rail-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1200px) {
+  .jm-rail-section .jm-product-rail__track.jm-rail-grid {
+    gap: 1.15rem;
+  }
 }
 
 /* Dot pagination below a rail track */

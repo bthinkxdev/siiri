@@ -4,23 +4,14 @@
 <section class="hm-rail jm-rail-section" aria-label="{{ title }}">
   <div class="hm-wrap">
     {% include "cms/sections/_ornament_head.html" with title=title %}
-    <div class="jm-featured__rail">
-      <button type="button" class="jm-rail-arrow jm-rail-arrow--prev" data-rail-scroll="prev" aria-label="{% trans 'Previous products' %}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
-      </button>
-      {# 4+ products are split evenly across two rows; fewer than 4 stay on one row. #}
-      <div class="product-rail-scroll jm-product-rail__track{% if products|length >= 4 %} product-rail-scroll--two-rows{% endif %}" role="list" data-rail-track>
-        {% for product in products %}
-        <div class="product-rail-item" role="listitem">
-          {% include "catalog/partials/product_card.html" with product=product force_badge=badge %}
-        </div>
-        {% endfor %}
+    {# Wrapping grid: 2 products per row on mobile, 4 on laptop/desktop; extras flow to the next row. #}
+    <div class="jm-product-rail__track jm-rail-grid" role="list">
+      {% for product in products %}
+      <div class="product-rail-item" role="listitem">
+        {% include "catalog/partials/product_card.html" with product=product force_badge=badge %}
       </div>
-      <button type="button" class="jm-rail-arrow jm-rail-arrow--next" data-rail-scroll="next" aria-label="{% trans 'Next products' %}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
+      {% endfor %}
     </div>
-    <div class="jm-rail-dots" data-rail-dots></div>
     {% if view_all %}
     <a href="{{ view_all }}" class="jm-rail-viewall">{% trans "View All" %}</a>
     {% endif %}
