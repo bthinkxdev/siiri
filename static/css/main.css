@@ -3777,6 +3777,14 @@ body.mobile-search-open .jm-wa-float {
   }
 }
 
+/* 4+ products: split evenly across two rows (fills column by column, still scrolls sideways) */
+.jm-rail-section .jm-product-rail__track.product-rail-scroll--two-rows {
+  display: grid;
+  grid-template-rows: repeat(2, auto);
+  grid-auto-flow: column;
+  grid-auto-columns: var(--jm-rail-card-w);
+}
+
 /* Dot pagination below a rail track */
 .jm-rail-dots {
   display: flex;

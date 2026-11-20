@@ -8,7 +8,8 @@
       <button type="button" class="jm-rail-arrow jm-rail-arrow--prev" data-rail-scroll="prev" aria-label="{% trans 'Previous products' %}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
-      <div class="product-rail-scroll jm-product-rail__track" role="list" data-rail-track>
+      {# 4+ products are split evenly across two rows; fewer than 4 stay on one row. #}
+      <div class="product-rail-scroll jm-product-rail__track{% if products|length >= 4 %} product-rail-scroll--two-rows{% endif %}" role="list" data-rail-track>
         {% for product in products %}
         <div class="product-rail-item" role="listitem">
           {% include "catalog/partials/product_card.html" with product=product force_badge=badge %}
