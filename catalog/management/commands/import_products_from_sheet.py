@@ -313,8 +313,10 @@ class Command(BaseCommand):
             register_heif_opener()
             self._heif_ready = True
         with Image.open(path) as img:
-            img = ImageOps.exif_transpose(img).convert("RGB")
+            # Shrink before transposing/converting so those copies are small: the
+            # full-size decode is the memory peak, which matters on small servers.
             img.thumbnail((MAX_IMAGE_EDGE, MAX_IMAGE_EDGE))
+            img = ImageOps.exif_transpose(img).convert("RGB")
             buf = io.BytesIO()
             img.save(buf, "JPEG", quality=JPEG_QUALITY, optimize=True)
         self._jpeg_cache[path] = buf.getvalue()
