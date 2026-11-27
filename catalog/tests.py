@@ -9,7 +9,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from accounts.services import register_customer_email
-from catalog.models import Product, ProductVariant
+from catalog.models import Product, ProductImage, ProductVariant
 from core.models import Currency
 from orders.models import Order, OrderItem, OrderStatus
 
@@ -189,7 +189,7 @@ class PdpVariantSkuTests(TestCase):
     """The PDP SKU must be the selected variant's own SKU (not the parent's, not parent + variant)."""
 
     def setUp(self) -> None:
-        from catalog.models import Product, ProductVariant
+        from catalog.models import Product, ProductImage, ProductVariant
 
         self.product = Product.objects.create(
             name="Sku Kurta", slug="sku-kurta", sku="KRT", base_price="349.00",
@@ -257,3 +257,75 @@ class OutOfStockSortsLastTests(TestCase):
         rails = get_homepage_product_rails()
         slugs = [p.slug for p in rails["new_arrivals"]]
         self.assertLess(slugs.index("in-stock-new"), slugs.index("out-of-stock-new"))
+
+
+class ImportProductsFromSheetTests(TestCase):
+    """import_products_from_sheet: SKU-based image mapping with parent fallback."""
+
+    HEADERS = ["SKU *", "Product Name *", "Description", "Care Instructions", "Brand", "Collections",
+               "Fabrics", "Color", "MRP *", "Selling Price *", "Purchase Price *", "Stock Quantity *"]
+
+    def _run(self, rows, image_names):
+        import tempfile
+        from io import StringIO
+        from pathlib import Path
+
+        from django.core.management import call_command
+        from django.test import override_settings
+        from openpyxl import Workbook
+        from PIL import Image
+
+        with tempfile.TemporaryDirectory() as tmp, override_settings(MEDIA_ROOT=tmp):
+            folder = Path(tmp)
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Products"
+            ws.append(self.HEADERS)
+            for row in rows:
+                ws.append(row)
+            wb.save(folder / "sheet.xlsx")
+            for name in image_names:
+                Image.new("RGB", (40, 50), "red").save(folder / name)
+            out = StringIO()
+            call_command("import_products_from_sheet", sheet=str(folder / "sheet.xlsx"),
+                         images_dir=str(folder), stdout=out)
+            # Read while MEDIA_ROOT still exists: every stored image must be real JPEG data.
+            self.image_headers = []
+            for img in ProductImage.objects.all():
+                with img.image.open("rb") as fh:
+                    self.image_headers.append(fh.read(3))
+            return out.getvalue()
+
+    def test_creates_products_with_own_parent_and_no_image(self) -> None:
+        rows = [
+            [70773451.0, "kota doria- wine", "d", "Dry clean", "Siiri", "Breezy cotton", "Cotton ", "Purple", 3150, 2650, None, 1],
+            [None] * 12,
+            ["70773451-2", "Kota Doria - Olive", "d", "", "Siiri", "breezy cotton", "cotton", "", 3150, 2650, None, 1],
+            ["11111111", "Bandhani Saree", "d", "", "Siiri", "", "", "", 100, 200, 50, 1],
+            ["22222222", "Bandhani Saree", "d", "", "Siiri", "", "", "", 100, 90, 50, 1],
+        ]
+        # Own image for the first SKU; "-2" falls back to the parent (un-suffixed 70773451) image.
+        out = self._run(rows, ["70773451-Kota Doria Parent.png", "11111111 Bandhani.png"])
+
+        self.assertEqual(Product.objects.count(), 4)
+        first = Product.objects.get(sku="70773451")
+        self.assertEqual(first.name, "Kota Doria - Wine")
+        self.assertEqual(first.images.count(), 1)
+        self.assertTrue(first.images.get().is_primary)
+        self.assertTrue(first.images.get().image.name.endswith(".jpg"))
+        self.assertEqual(self.image_headers, [b"\xff\xd8\xff"] * 3)  # real JPEG data, not renamed PNGs
+        self.assertEqual(first.purchase_price, 0)
+        self.assertEqual(first.collections.count(), 1)  # 'Breezy cotton' reused case-insensitively
+        self.assertEqual(Product.objects.get(sku="70773451-2").images.count(), 1)
+        self.assertEqual(Product.objects.get(sku="22222222").images.count(), 0)
+        self.assertEqual(Product.objects.get(sku="11111111").mrp, 200)  # selling > MRP -> MRP raised
+        slugs = set(Product.objects.filter(name="Bandhani Saree").values_list("slug", flat=True))
+        self.assertEqual(len(slugs), 2)  # duplicate names get distinct slugs
+        self.assertIn("Created without image: 22222222", out)
+
+    def test_rerun_skips_existing_skus(self) -> None:
+        rows = [["33333333", "Tussar Saree", "d", "", "Siiri", "", "", "", 100, 90, 50, 1]]
+        self._run(rows, [])
+        out = self._run(rows, [])
+        self.assertEqual(Product.objects.filter(sku="33333333").count(), 1)
+        self.assertIn("SKIP", out)
